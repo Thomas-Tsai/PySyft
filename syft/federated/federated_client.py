@@ -1,9 +1,12 @@
 import torch as th
 from torch.utils.data import BatchSampler, RandomSampler, SequentialSampler
 import numpy as np
+import syft as sy  # import the Pysyft library
+import pdb
 
 from syft.generic.object_storage import ObjectStorage
 from syft.federated.train_config import TrainConfig
+from syft.federated.model_config import ModelConfig    ## added by bobsonlin
 
 
 class FederatedClient(ObjectStorage):
@@ -14,6 +17,7 @@ class FederatedClient(ObjectStorage):
         self.datasets = datasets if datasets is not None else dict()
         self.optimizer = None
         self.train_config = None
+        self.model_config = None
 
     def add_dataset(self, dataset, key: str):
         if key not in self.datasets:
@@ -34,12 +38,20 @@ class FederatedClient(ObjectStorage):
         if isinstance(obj, TrainConfig):
             self.train_config = obj
             self.optimizer = None
+        elif isinstance(obj, ModelConfig):    ## added by bobsonlin
+            self.model_config = obj
+            self.optimizer = None
         else:
             super().set_obj(obj)
 
     def _check_train_config(self):
         if self.train_config is None:
             raise ValueError("Operation needs TrainConfig object to be set.")
+      
+    ## added by bobsonlin
+    def _check_model_config(self):
+        if self.model_config is None:
+            raise ValueError("Operation needs ModelConfig object to be set.")
 
     def _build_optimizer(
         self, optimizer_name: str, model, optimizer_args: dict
@@ -83,6 +95,44 @@ class FederatedClient(ObjectStorage):
 
         self._build_optimizer(
             self.train_config.optimizer, model, optimizer_args=self.train_config.optimizer_args
+        )
+
+        return self._fit(model=model, dataset_key=dataset_key, loss_fn=loss_fn, device=device)
+    
+    ## added by bobsonlin
+    def fit_sagg(self, dataset_key: str, device: str = "cpu", **kwargs):
+        """Fits a model on the local dataset as specified in the local TrainConfig object.
+
+        Args:
+            dataset_key: Identifier of the local dataset that shall be used for training.
+            **kwargs: Unused.
+
+        Returns:
+            loss: Training loss on the last batch of training data.
+        """
+        print("###", "fit_sagg", "###")
+        self._check_train_config()
+        self._check_model_config()
+
+        if dataset_key not in self.datasets:
+            raise ValueError(f"Dataset {dataset_key} unknown.")
+
+        ## For TrainConfig
+#         model = self.get_obj(self.train_config._model_id).obj
+#         loss_fn = self.get_obj(self.train_config._loss_fn_id).obj
+        
+        ## For ModelConfig
+        model = self.get_obj(self.model_config._model_id)
+        loss_fn = self.get_obj(self.train_config._loss_fn_id).obj
+
+        ## For TrainConfig
+#         self._build_optimizer(
+#             self.train_config.optimizer, model, optimizer_args=self.train_config.optimizer_args
+#         )
+
+        ## For ModelConfig
+        self._build_optimizer(
+            self.model_config.optimizer, model, optimizer_args=self.model_config.optimizer_args
         )
 
         return self._fit(model=model, dataset_key=dataset_key, loss_fn=loss_fn, device=device)

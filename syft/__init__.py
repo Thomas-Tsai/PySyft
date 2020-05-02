@@ -84,6 +84,9 @@ from syft.frameworks.torch.he.paillier import keygen
 # import common
 import syft.common.util
 
+## added by bobsonlin
+from syft.federated.model_config import ModelConfig    ## added by bobsonlin
+
 
 def pool():
     if not hasattr(syft, "_pool"):
@@ -120,6 +123,7 @@ __all__.extend(
         "FederatedDataLoader",
         "BaseDataset",
         "TrainConfig",
+        "ModelConfig",
     ]
 )
 

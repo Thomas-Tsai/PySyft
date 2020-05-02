@@ -309,6 +309,45 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
 
         # Return the deserialized response.
         return sy.serde.deserialize(response)
+    
+    async def async_fit_sagg(self, dataset_key: str, device: str = "cpu", return_ids: List[int] = None):
+        """Asynchronous call to fit function on the remote location.
+        Args:
+            dataset_key: Identifier of the dataset which shall be used for the training.
+            return_ids: List of return ids.
+        Returns:
+            See return value of the FederatedClient.fit() method.
+        """
+        print("###", "async_fit_sagg", "###")
+        if return_ids is None:
+            return_ids = [sy.ID_PROVIDER.pop()]
+
+        # Close the existing websocket connection in order to open a asynchronous connection
+        # This code is not tested with secure connections (wss protocol).
+        self.close()
+        async with websockets.connect(
+            self.url, timeout=TIMEOUT_INTERVAL, max_size=None, ping_timeout=TIMEOUT_INTERVAL
+        ) as websocket:
+            message = self.create_worker_command_message(
+                command_name="fit_sagg", return_ids=return_ids, dataset_key=dataset_key, device=device
+            )
+
+            # Send the message and return the deserialized response.
+            serialized_message = sy.serde.serialize(message)
+
+            await websocket.send(serialized_message)
+            await websocket.recv()  # returned value will be None, so don't care
+
+        # Reopen the standard connection
+        self.connect()
+
+        # Send an object request message to retrieve the result tensor of the fit() method
+        msg = ObjectRequestMessage(return_ids[0], None, "")
+        serialized_message = sy.serde.serialize(msg)
+        response = self._send_msg(serialized_message)
+
+        # Return the deserialized response.
+        return sy.serde.deserialize(response)
 
     def __str__(self) -> str:
         return "Federated Worker < id: " + self.id + " >"
