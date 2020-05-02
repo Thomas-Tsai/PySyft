@@ -40,6 +40,7 @@ import syft
 from syft import dependency_check
 
 from syft.federated.train_config import TrainConfig
+from syft.federated.model_config import ModelConfig    ## added by bobsonlin 
 from syft.frameworks.torch.tensors.decorators.logging import LoggingTensor
 from syft.frameworks.torch.tensors.interpreters.precision import FixedPrecisionTensor
 from syft.frameworks.torch.tensors.interpreters.private import PrivateTensor
@@ -141,6 +142,7 @@ OBJ_SIMPLIFIER_AND_DETAILERS = [
     String,
     BaseDataset,
     PointerDataset,
+    ModelConfig,    ## added by bobsonlin
 ]
 
 # If an object implements its own force_simplify and force_detail functions it should be stored in this list
