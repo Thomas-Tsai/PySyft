@@ -317,6 +317,7 @@ class BaseWorker(AbstractWorker, ObjectStorage):
             print(f"worker {self} received {type(msg).__name__} {msg.contents}")
 
         # Step 1: route message to appropriate function
+        print("###", f"worker {self} received {type(msg).__name__}", "###")
         response = self._message_router[type(msg)](msg)
 
         # Step 2: Serialize the message to simple python objects
@@ -460,8 +461,10 @@ class BaseWorker(AbstractWorker, ObjectStorage):
 
     def execute_tensor_command(self, cmd: TensorCommandMessage) -> PointerTensor:
         if isinstance(cmd.action, ComputationAction):
+            print("--- It is ComputationAction ---", "cmd.action:", cmd.action)
             return self.execute_computation_action(cmd.action)
         else:
+            print("--- It is NOT ComputationAction ---", "cmd.action:", cmd.action)
             return self.execute_communication_action(cmd.action)
 
     def execute_computation_action(self, action: ComputationAction) -> PointerTensor:
@@ -481,28 +484,37 @@ class BaseWorker(AbstractWorker, ObjectStorage):
 
         # Handle methods
         if _self is not None:
+            print("###", "Handle methods  ", "###")
             if type(_self) == int:
+                print("type(_self) == int")
                 _self = BaseWorker.get_obj(self, _self)
                 if _self is None:
                     return
             if type(_self) == str and _self == "self":
+                print("type(_self) == str and _self == 'self'")
                 _self = self
             if sy.framework.is_inplace_method(op_name):
+                print("sy.framework.is_inplace_method(op_name)")
                 # TODO[jvmancuso]: figure out a good way to generalize the
                 # above check (#2530)
                 getattr(_self, op_name)(*args_, **kwargs_)
                 return
             else:
+                print("else")
                 try:
+                    print("try  ", "type(_self):", type(_self), "op_name:", op_name, "args_:", args_, "kwargs_:", kwargs_)
                     response = getattr(_self, op_name)(*args_, **kwargs_)
                 except TypeError:
+                    print("except TypeError")
                     # TODO Andrew thinks this is gross, please fix. Instead need to properly deserialize strings
                     new_args = [
                         arg.decode("utf-8") if isinstance(arg, bytes) else arg for arg in args_
                     ]
+                    print("op_name:", op_name, "kwargs:", kwargs_)
                     response = getattr(_self, op_name)(*new_args, **kwargs_)
         # Handle functions
         else:
+            print("###", "Handle functions", "###")
             # At this point, the command is ALWAYS a path to a
             # function (i.e., torch.nn.functional.relu). Thus,
             # we need to fetch this function and run it.

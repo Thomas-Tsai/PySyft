@@ -1111,14 +1111,23 @@ class AdditiveSharingTensor(AbstractTensor):
         tensor_id, field, dtype, crypto_provider, chain, garbage_collect = tensor_tuple
 
         crypto_provider = sy.serde.msgpack.serde._detail(worker, crypto_provider)
-
-        tensor = AdditiveSharingTensor(
-            owner=worker,
-            id=sy.serde.msgpack.serde._detail(worker, tensor_id),
-            field=sy.serde.msgpack.serde._detail(worker, field),
-            dtype=dtype,
-            crypto_provider=worker.get_worker(crypto_provider),
-        )
+        try:
+            tensor = AdditiveSharingTensor(
+                owner=worker,
+                id=sy.serde.msgpack.serde._detail(worker, tensor_id),
+                field=sy.serde.msgpack.serde._detail(worker, field),
+                dtype=dtype,
+                crypto_provider=worker.get_worker(crypto_provider),
+            )
+        except TypeError:
+            dtype = dtype.decode("utf-8")
+            tensor = AdditiveSharingTensor(
+                owner=worker,
+                id=sy.serde.msgpack.serde._detail(worker, tensor_id),
+                field=sy.serde.msgpack.serde._detail(worker, field),
+                dtype=dtype,
+                crypto_provider=worker.get_worker(crypto_provider),
+            )
 
         if chain is not None:
             chain = sy.serde.msgpack.serde._detail(worker, chain)

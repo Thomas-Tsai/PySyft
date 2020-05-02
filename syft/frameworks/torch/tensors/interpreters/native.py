@@ -6,6 +6,8 @@ import weakref
 
 import numpy as np
 import torch
+import time
+import pdb
 
 import syft
 from syft.generic.frameworks.hook import hook_args
@@ -877,9 +879,12 @@ class TorchTensor(AbstractTensor):
                 *owners, field=field, dtype=dtype, crypto_provider=crypto_provider, **kwargs_
             )
         else:
+#             pdb.set_trace()
             if self.type() == "torch.FloatTensor":
                 raise TypeError("FloatTensor cannot be additively shared, Use fix_precision.")
 
+            # on: /home/billy/billy_ws/fl_0421/PySyft/syft/generic/tensor.py(53
+            start_time = time.time()
             shared_tensor = (
                 syft.AdditiveSharingTensor(
                     field=field, dtype=dtype, crypto_provider=crypto_provider, owner=self.owner
@@ -887,6 +892,9 @@ class TorchTensor(AbstractTensor):
                 .on(self.copy(), wrap=False)
                 .init_shares(*owners)
             )
+            end_time = time.time()
+            encryption_time = end_time - start_time
+            print("encryption_time: ", encryption_time)
 
         if requires_grad and not isinstance(shared_tensor, syft.PointerTensor):
             shared_tensor = syft.AutogradTensor().on(shared_tensor, wrap=False)
