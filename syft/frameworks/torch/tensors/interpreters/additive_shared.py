@@ -1,6 +1,8 @@
 import math
 import torch
 import warnings
+import time
+import pdb
 
 import syft as sy
 from syft.generic.utils import memorize
@@ -252,14 +254,24 @@ class AdditiveSharingTensor(AbstractTensor):
             *owners the list of shareholders. Can be of any length.
 
             """
+        start_time = time.time()
         shares = self.generate_shares(
             self.child, n_workers=len(owners), random_type=self.torch_dtype
         )
+        end_time = time.time()
+        print("generate shares", "   time:", end_time - start_time)
 
         shares_dict = {}
+        distribute_time = 0
+        pdb.set_trace()
         for share, owner in zip(shares, owners):
+            start_time = time.time()
             share_ptr = share.send(owner, **no_wrap)
+            end_time = time.time()
+            print("share to", owner.id, "   time:", end_time - start_time, "   shape:", share.shape)
+            distribute_time += (end_time - start_time)
             shares_dict[share_ptr.location.id] = share_ptr
+        print("distribute_time:", distribute_time)
 
         self.child = shares_dict
         return self
