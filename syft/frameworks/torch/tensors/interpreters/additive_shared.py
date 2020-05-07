@@ -18,6 +18,7 @@ from syft_proto.frameworks.torch.tensors.interpreters.v1.additive_shared_pb2 imp
     AdditiveSharingTensor as AdditiveSharingTensorPB,
 )
 from syft_proto.types.syft.v1.id_pb2 import Id as IdPB
+import time
 
 no_wrap = {"no_wrap": True}
 
@@ -272,7 +273,10 @@ class AdditiveSharingTensor(AbstractTensor):
 
         shares_dict = {}
         for share, owner in zip(shares, owners):
+            start_time = time.time()
             share_ptr = share.send(owner, **no_wrap)
+            end_time = time.time()
+            print("To worker {}".format(owner.id), "size:", share.shape, "distribution time:", end_time - start_time)
             shares_dict[share_ptr.location.id] = share_ptr
 
         self.child = shares_dict
