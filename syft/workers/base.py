@@ -41,7 +41,7 @@ from syft.exceptions import ObjectNotFoundError
 from syft.exceptions import PlanCommandUnknownError
 from syft.exceptions import ResponseSignatureError
 from syft.exceptions import WorkerNotFoundException
-
+import pdb
 
 # this if statement avoids circular imports between base.py and pointer.py
 if TYPE_CHECKING:
@@ -732,6 +732,7 @@ class BaseWorker(AbstractWorker, ObjectStorage):
             location: A BaseWorker instance indicating the worker which should
                 receive the object.
         """
+        print(obj.shape, obj.dtype)
         return self.send_msg(ObjectMessage(obj), location)
 
     def request_obj(

@@ -171,6 +171,7 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
             Returns:
                 node_response (bytes) : response payload.
         """
+        print("message size:", len(message))
         self.ws.send_binary(message)
         response = self.ws.recv()
         return response
