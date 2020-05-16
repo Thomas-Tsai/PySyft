@@ -275,10 +275,12 @@ class AdditiveSharingTensor(AbstractTensor):
 
         shares_dict = {}
         for share, owner in zip(shares, owners):
-            start_time = time.time()
+            # pdb.set_trace()
+            # start_time = time.time()
             share_ptr = share.send(owner, **no_wrap)
-            end_time = time.time()
-            print(owner.id, reduce(lambda x, y: x*y, list(share.shape)), start_time, end_time, end_time - start_time)
+            # end_time = time.time()
+            print(owner.id, reduce(lambda x, y: x*y, list(share.shape)))
+            # print(owner.id, reduce(lambda x, y: x*y, list(share.shape)), start_time, end_time, end_time - start_time)
             # print("To worker {}".format(owner.id), "size:", share.shape, "distribution time:", end_time - start_time)
             shares_dict[share_ptr.location.id] = share_ptr
 

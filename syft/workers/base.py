@@ -41,6 +41,7 @@ from syft.exceptions import ObjectNotFoundError
 from syft.exceptions import PlanCommandUnknownError
 from syft.exceptions import ResponseSignatureError
 from syft.exceptions import WorkerNotFoundException
+import time
 import pdb
 
 # this if statement avoids circular imports between base.py and pointer.py
@@ -287,8 +288,11 @@ class BaseWorker(AbstractWorker, ObjectStorage):
         bin_message = sy.serde.serialize(message, worker=self)
 
         # Step 2: send the message and wait for a response
+        # start_time = time.time()
         bin_response = self._send_msg(bin_message, location)
-
+        # end_time = time.time()
+        # print(start_time, end_time, end_time - start_time)
+        
         # Step 3: deserialize the response
         response = sy.serde.deserialize(bin_response, worker=self)
 

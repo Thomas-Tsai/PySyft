@@ -11,7 +11,7 @@ from syft.codes import REQUEST_MSG, RESPONSE_MSG
 from syft.federated.federated_client import FederatedClient
 from syft.workers.websocket_client import WebsocketClientWorker
 from syft.grid.authentication.credential import AbstractCredential
-
+import time
 
 class NodeClient(WebsocketClientWorker, FederatedClient):
     """Federated Node Client."""
@@ -172,8 +172,11 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
                 node_response (bytes) : response payload.
         """
         print("message size:", len(message))
+        start_time = time.time()
         self.ws.send_binary(message)
         response = self.ws.recv()
+        end_time = time.time()
+        print(start_time, end_time, end_time - start_time)
         return response
 
     def _return_bool_result(self, result, return_key=None):
