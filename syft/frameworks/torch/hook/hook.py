@@ -25,7 +25,7 @@ from syft.frameworks.torch.torch_attributes import TorchAttributes
 from syft.generic.pointers.multi_pointer import MultiPointerTensor
 from syft.generic.pointers.pointer_tensor import PointerTensor
 from syft.generic.tensor import initialize_tensor
-from syft.generic.tensor import _apply_args
+from syft.generic.object import _apply_args
 from syft.workers.base import BaseWorker
 from syft.workers.virtual import VirtualWorker
 from syft.execution.plan import Plan
@@ -85,9 +85,15 @@ class TorchHook(FrameworkHook):
     """
 
     def __init__(
-        self, torch, local_worker: BaseWorker = None, is_client: bool = True, verbose: bool = True
+        self,
+        torch,
+        local_worker: BaseWorker = None,
+        is_client: bool = True,
+        verbose: bool = False,
+        seed=None,
     ):
-        """Initializes the hook.
+        """
+        Initializes the hook.
 
         Initialize the hook and define all the attributes pertaining to the
         torch hook in a special TorchAttibute class, that will be added in the
@@ -97,6 +103,9 @@ class TorchHook(FrameworkHook):
         # Save the provided torch module as an attribute of the hook
         self.torch = torch
         self.framework = self.torch
+        if seed is not None:
+            syft.ID_PROVIDER.seed(seed)
+        self.verbose = verbose
 
         # Save the local worker as an attribute
         self.local_worker = local_worker
@@ -122,9 +131,13 @@ class TorchHook(FrameworkHook):
             # be agnostic to the means by which workers communicate (such as
             # peer-to-peer, sockets, through local ports, or all within the
             # same process)
-            self.local_worker = VirtualWorker(hook=self, is_client_worker=is_client, id="me")
+            self.local_worker = VirtualWorker(
+                hook=self, is_client_worker=is_client, id="me", verbose=verbose
+            )
         else:
             self.local_worker.hook = self
+
+        self._syft_workers = {self.local_worker}
 
         self.to_auto_overload = {}
 
@@ -214,11 +227,14 @@ class TorchHook(FrameworkHook):
     def create_wrapper(cls, wrapper_type):
         # Note this overrides FrameworkHook.create_wrapper, so it must conform to
         # that classmethod's signature
-        assert (
-            wrapper_type is None or wrapper_type == torch.Tensor
-        ), "TorchHook only uses torch.Tensor wrappers"
-
-        return torch.Tensor()
+        if wrapper_type is None or wrapper_type == torch.Tensor:
+            return torch.Tensor()
+        elif isinstance(wrapper_type, torch.dtype):
+            return torch.tensor([], dtype=wrapper_type)
+        else:
+            raise ValueError(
+                "Wrapper type should be None, torch.Tensor, or a torch.dtype like torch.long"
+            )
 
     def create_zeros(cls, *shape, dtype=None, **kwargs):
         return torch.zeros(*shape, dtype=dtype, **kwargs)
@@ -286,7 +302,10 @@ class TorchHook(FrameworkHook):
         @wraps(attr)
         def overloaded_attr(self_torch, *args, **kwargs):
             ptr = hook_self.local_worker.send_command(
-                recipient=self_torch.worker(), message=(f"{'torch'}.{attr}", None, args, kwargs)
+                recipient=self_torch.worker(),
+                cmd_name=f"{'torch'}.{attr}",
+                args_=args,
+                kwargs_=kwargs,
             )
 
             return ptr.wrap()
@@ -647,8 +666,9 @@ class TorchHook(FrameworkHook):
 
         def module_get_(nn_self):
             """overloads torch.nn instances with get method so that parameters could be sent back to owner"""
-            for p in nn_self.parameters():
-                p.get_()
+            for element_iter in tensor_iterator(nn_self):
+                for p in element_iter():
+                    p.get_()
 
             if isinstance(nn_self.forward, Plan):
                 nn_self.forward.get()
@@ -660,12 +680,12 @@ class TorchHook(FrameworkHook):
 
         def module_share_(nn_self, *args, **kwargs):
             """Overloads fix_precision for torch.nn.Module."""
-            # TODO: add .data and .grad to syft tensors
             if module_is_missing_grad(nn_self):
                 create_grad_objects(nn_self)
 
-            for p in nn_self.parameters():
-                p.share_(*args, **kwargs)
+            for element_iter in tensor_iterator(nn_self):
+                for p in element_iter():
+                    p.share_(*args, **kwargs)
 
             return nn_self
 
@@ -677,8 +697,9 @@ class TorchHook(FrameworkHook):
             if module_is_missing_grad(nn_self):
                 create_grad_objects(nn_self)
 
-            for p in nn_self.parameters():
-                p.fix_precision_(*args, **kwargs)
+            for element_iter in tensor_iterator(nn_self):
+                for p in element_iter():
+                    p.fix_precision_(*args, **kwargs)
 
             return nn_self
 
@@ -693,8 +714,9 @@ class TorchHook(FrameworkHook):
             # if module_is_missing_grad(nn_self):
             #    create_grad_objects(nn_self)
 
-            for p in nn_self.parameters():
-                p.float_precision_()
+            for element_iter in tensor_iterator(nn_self):
+                for p in element_iter():
+                    p.float_precision_()
 
             return nn_self
 
@@ -828,3 +850,7 @@ class TorchHook(FrameworkHook):
             return total_norm
 
         self.torch.nn.utils.clip_grad_norm_ = clip_grad_norm_remote_
+
+    def set_verbose(self, flag):
+        for workers in self._syft_workers:
+            workers.verbose = flag
