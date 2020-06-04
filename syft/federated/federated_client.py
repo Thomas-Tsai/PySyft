@@ -1,7 +1,8 @@
 import torch as th
 from torch.utils.data import BatchSampler, RandomSampler, SequentialSampler
 import numpy as np
-
+import time
+import pdb
 from syft.generic.object_storage import ObjectStorage
 from syft.federated.train_config import TrainConfig
 from syft.federated.model_config import ModelConfig
@@ -46,6 +47,10 @@ class FederatedClient(ObjectStorage):
         if self.train_config is None:
             raise ValueError("Operation needs TrainConfig object to be set.")
 
+    def _check_model_config(self):
+        if self.model_config is None:
+            raise ValueError("Operation needs ModelConfig object to be set.")
+    
     def _build_optimizer(
         self, optimizer_name: str, model, optimizer_args: dict
     ) -> th.optim.Optimizer:
@@ -91,6 +96,17 @@ class FederatedClient(ObjectStorage):
         )
 
         return self._fit(model=model, dataset_key=dataset_key, loss_fn=loss_fn, device=device)
+    
+    ## added by bobsonlin
+    def model_share(self, encrypters):
+        self._check_model_config()
+        model = self.get_obj(self.model_config._model_id)
+        print("Get the model in model_share !, Ready to sleep 5sec")
+        start = time.time()
+        time.sleep(5)
+        end = time.time()
+        print("Wake up !, Duration:", end - start)
+        return 0
 
     def _create_data_loader(self, dataset_key: str, shuffle: bool = False):
         data_range = range(len(self.datasets[dataset_key]))

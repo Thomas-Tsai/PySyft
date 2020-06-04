@@ -322,5 +322,21 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
         # Return the deserialized response.
         return sy.serde.deserialize(response)
 
+    ## added by bobsonlin
+    async def async_model_share(self, encrypters):
+        self.close()
+        
+        async with websockets.connect(
+            self.url, timeout=TIMEOUT_INTERVAL, max_size=None, ping_timeout=TIMEOUT_INTERVAL
+        ) as websocket:
+            message = self.create_worker_command_message(
+                command_name="model_share", encrypters=encrypters)
+            serialized_message = sy.serde.serialize(message)
+            await websocket.send(serialized_message)
+            await websocket.recv()
+            
+        self.connect()
+        return 0
+    
     def __str__(self) -> str:
         return "Federated Worker < id: " + self.id + " >"
