@@ -203,3 +203,10 @@ class FederatedClient(ObjectStorage):
 
     def _log_msgs(self, value):
         self.log_msgs = value
+        
+    ## added by bobsonlin
+    def list_objects(self, *args):
+        return str(self._objects)
+    
+    def list_tensors(self, *args):
+        return str(self._tensors)
