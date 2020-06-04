@@ -40,6 +40,7 @@ import syft
 from syft import dependency_check
 
 from syft.federated.train_config import TrainConfig
+from syft.federated.model_config import ModelConfig    ## added by bobsonlin
 from syft.frameworks.torch.tensors.decorators.logging import LoggingTensor
 from syft.frameworks.torch.tensors.interpreters.precision import FixedPrecisionTensor
 from syft.frameworks.torch.tensors.interpreters.private import PrivateTensor
@@ -92,7 +93,7 @@ else:
     MAP_TF_SIMPLIFIERS_AND_DETAILERS = {}
 
 from syft.serde.msgpack.proto import proto_type_info
-
+import pdb
 # Maps a type to a tuple containing its simplifier and detailer function
 # NOTE: serialization constants for these objects need to be defined in `proto.json` file
 # in https://github.com/OpenMined/proto
@@ -139,6 +140,7 @@ OBJ_SIMPLIFIER_AND_DETAILERS = [
     String,
     BaseDataset,
     PointerDataset,
+    ModelConfig,    ## added by bobsonlin
 ]
 
 # If an object implements its own force_simplify and force_detail functions it should be stored in this list

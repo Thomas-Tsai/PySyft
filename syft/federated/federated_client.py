@@ -4,6 +4,7 @@ import numpy as np
 
 from syft.generic.object_storage import ObjectStorage
 from syft.federated.train_config import TrainConfig
+from syft.federated.model_config import ModelConfig
 
 
 class FederatedClient(ObjectStorage):
@@ -14,6 +15,7 @@ class FederatedClient(ObjectStorage):
         self.datasets = datasets if datasets is not None else dict()
         self.optimizer = None
         self.train_config = None
+        self.model_config = None
 
     def add_dataset(self, dataset, key: str):
         if key not in self.datasets:
@@ -33,6 +35,9 @@ class FederatedClient(ObjectStorage):
         """
         if isinstance(obj, TrainConfig):
             self.train_config = obj
+            self.optimizer = None
+        elif isinstance(obj, ModelConfig):
+            self.model_config = obj
             self.optimizer = None
         else:
             super().set_obj(obj)
