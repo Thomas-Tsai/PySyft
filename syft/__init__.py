@@ -7,6 +7,9 @@ Differential Privacy, and Multi-Party Computation (MPC) within PyTorch.
 from syft import dependency_check
 from syft import frameworks  # Triggers registration of any available frameworks
 
+## Model Config
+from syft.federated.model_config import ModelConfig    ## added by bobsonlin
+
 # Major imports
 from syft.version import __version__
 
@@ -120,6 +123,7 @@ __all__.extend(
         "FederatedDataLoader",
         "BaseDataset",
         "TrainConfig",
+        "ModelConifg",
     ]
 )
 
