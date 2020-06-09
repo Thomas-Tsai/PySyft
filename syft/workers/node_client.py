@@ -16,6 +16,7 @@ from syft.codes import REQUEST_MSG, RESPONSE_MSG
 from syft.federated.federated_client import FederatedClient
 from syft.workers.websocket_client import WebsocketClientWorker
 from syft.grid.authentication.credential import AbstractCredential
+import pdb
 
 TIMEOUT_INTERVAL = 60
 
@@ -177,8 +178,12 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
             Returns:
                 node_response (bytes) : response payload.
         """
+        print("---", "ready to send_binary()", "---", "len(message):", len(message))
         self.ws.send_binary(message)
+        print("---", "send_binary() is Done !", "---", "Gonna recv()")
         response = self.ws.recv()
+        print("---", "recv() is Done", "---")
+        print("")
         return response
 
     def _return_bool_result(self, result, return_key=None):

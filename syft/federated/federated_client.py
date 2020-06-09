@@ -101,11 +101,25 @@ class FederatedClient(ObjectStorage):
     def model_share(self, encrypters):
         self._check_model_config()
         model = self.get_obj(self.model_config._model_id)
-        print("Get the model in model_share !, Ready to sleep 5sec")
-        start = time.time()
-        time.sleep(5)
-        end = time.time()
-        print("Wake up !, Duration:", end - start)
+        
+        print("Get the model in model_share !, Ready to generate shares")
+        
+        ## test
+#         num = th.tensor([1.0, 2.0, 3.1])
+#         fix_num = num.fix_precision(precision_fractional=5)
+#         pdb.set_trace()
+
+        ## generate shares
+        enc_params = []
+        params = list(model.parameters())
+        for param_index in range(len(params)):
+            fix_para = params[param_index].fix_precision(precision_fractional=5)
+            enc_para = fix_para.share(*encrypters)
+            enc_params.append(enc_para)
+
+        print("Done !")
+#         pdb.set_trace()
+        
         return 0
 
     def _create_data_loader(self, dataset_key: str, shuffle: bool = False):
