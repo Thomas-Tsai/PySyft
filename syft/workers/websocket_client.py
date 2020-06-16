@@ -15,6 +15,11 @@ from syft.messaging.message import SearchMessage
 from syft.generic.tensor import AbstractTensor
 from syft.workers.base import BaseWorker
 
+## added by bobsonlin
+import gevent
+from gevent import monkey
+monkey.patch_all()
+
 logger = logging.getLogger(__name__)
 
 TIMEOUT_INTERVAL = 60
