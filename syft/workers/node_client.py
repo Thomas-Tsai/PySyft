@@ -328,20 +328,41 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
         return sy.serde.deserialize(response)
 
     ## added by bobsonlin
-    async def async_model_share(self, encrypters):
-        self.close()
+    async def async_model_share(self, encrypters, return_ids: List[int] = None):
         
+        if return_ids is None:
+            return_ids = [sy.ID_PROVIDER.pop()]
+
+        self.close()
         async with websockets.connect(
             self.url, timeout=TIMEOUT_INTERVAL, max_size=None, ping_timeout=TIMEOUT_INTERVAL
         ) as websocket:
             message = self.create_worker_command_message(
-                command_name="model_share", encrypters=encrypters)
+                command_name="model_share", encrypters=encrypters, return_ids=return_ids)
             serialized_message = sy.serde.serialize(message)
             await websocket.send(serialized_message)
-            await websocket.recv()
+            await websocket.recv()    ## make sure that the command is executed 
+            # bin_response = await websocket.recv()
+            # response = sy.serde.deserialize(bin_response)
+            # print("response:", response)
             
+        # Reopen the standard connection
         self.connect()
-        return 0
+
+        ## Retrieve the results !
+#         msg = ObjectRequestMessage(return_ids[0], None, "")
+#         serialized_message = sy.serde.serialize(msg)
+#         bin_response = self._send_msg(serialized_message)
+#         response = sy.serde.deserialize(bin_response)
+        
+        enc_params = []
+        for i in range(len(return_ids)):
+            msg = ObjectRequestMessage(return_ids[i], None, "")
+            serialized_message = sy.serde.serialize(msg)
+            bin_response = self._send_msg(serialized_message)
+            response = sy.serde.deserialize(bin_response)
+            enc_params.append(response)
+        return enc_params
     
     def __str__(self) -> str:
         return "Federated Worker < id: " + self.id + " >"

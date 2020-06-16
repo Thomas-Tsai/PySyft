@@ -117,10 +117,8 @@ class FederatedClient(ObjectStorage):
             enc_para = fix_para.share(*encrypters)
             enc_params.append(enc_para)
 
-        print("Done !")
-#         pdb.set_trace()
-        
-        return 0
+        print("Done !")        
+        return enc_params
 
     def _create_data_loader(self, dataset_key: str, shuffle: bool = False):
         data_range = range(len(self.datasets[dataset_key]))

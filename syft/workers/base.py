@@ -41,7 +41,7 @@ from syft.exceptions import ObjectNotFoundError
 from syft.exceptions import PlanCommandUnknownError
 from syft.exceptions import ResponseSignatureError
 from syft.exceptions import WorkerNotFoundException
-
+import pdb
 
 # this if statement avoids circular imports between base.py and pointer.py
 if TYPE_CHECKING:
@@ -583,8 +583,14 @@ class BaseWorker(AbstractWorker, ObjectStorage):
         response = getattr(self, command_name)(*args_, **kwargs_)
         #  TODO [midokura-silvia]: send the tensor directly
         #  TODO this code is currently necessary for the async_fit method in websocket_client.py
+
         if isinstance(response, FrameworkTensor):
             self.register_obj(obj=response, obj_id=return_ids[0])
+            return None
+        elif isinstance(response, List):
+            assert len(response) == len(return_ids)
+            for i in range(len(response)):
+                self.register_obj(obj=response[i], obj_id=return_ids[i])
             return None
         return response
 
