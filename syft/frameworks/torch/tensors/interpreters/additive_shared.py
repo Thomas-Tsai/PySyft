@@ -272,9 +272,7 @@ class AdditiveSharingTensor(AbstractTensor):
 
         shares_dict = {}
         for share, owner in zip(shares, owners):
-            print("additive_shared.py:275 --- ", "ready to send share to", owner)
             share_ptr = share.send(owner, **no_wrap)
-            print("additive_shared.py:277 --- ", "share has sent to", owner)
             shares_dict[share_ptr.location.id] = share_ptr
 
         self.child = shares_dict

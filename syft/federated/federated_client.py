@@ -101,13 +101,6 @@ class FederatedClient(ObjectStorage):
     def model_share(self, encrypters):
         self._check_model_config()
         model = self.get_obj(self.model_config._model_id)
-        
-        print("Get the model in model_share !, Ready to generate shares")
-        
-        ## test
-#         num = th.tensor([1.0, 2.0, 3.1])
-#         fix_num = num.fix_precision(precision_fractional=5)
-#         pdb.set_trace()
 
         ## generate shares
         enc_params = []
@@ -117,7 +110,6 @@ class FederatedClient(ObjectStorage):
             enc_para = fix_para.share(*encrypters)
             enc_params.append(enc_para)
 
-        print("Done !")        
         return enc_params
 
     def _create_data_loader(self, dataset_key: str, shuffle: bool = False):

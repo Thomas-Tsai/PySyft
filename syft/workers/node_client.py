@@ -178,12 +178,8 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
             Returns:
                 node_response (bytes) : response payload.
         """
-        print("---", "ready to send_binary()", "---", "len(message):", len(message))
         self.ws.send_binary(message)
-        print("---", "send_binary() is Done !", "---", "Gonna recv()")
         response = self.ws.recv()
-        print("---", "recv() is Done", "---")
-        print("")
         return response
 
     def _return_bool_result(self, result, return_key=None):
