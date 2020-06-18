@@ -6,7 +6,7 @@ import pdb
 from syft.generic.object_storage import ObjectStorage
 from syft.federated.train_config import TrainConfig
 from syft.federated.model_config import ModelConfig
-
+from syft.frameworks.torch.fl.loss_fn import nll_loss
 
 class FederatedClient(ObjectStorage):
     """A Client able to execute federated learning in local datasets."""
@@ -97,6 +97,29 @@ class FederatedClient(ObjectStorage):
 
         return self._fit(model=model, dataset_key=dataset_key, loss_fn=loss_fn, device=device)
     
+    def fit_mc(self, dataset_key: str, device: str = "cpu", **kwargs):
+        
+        self._check_model_config()
+        if dataset_key not in self.datasets:
+            raise ValueError(f"Dataset {dataset_key} unknown.")
+        
+        model = self.get_obj(self.model_config._model_id)
+        
+        # loss_fn = self.get_obj(self.model_config._loss_fn_id)
+        loss_fn = nll_loss
+        
+        self._build_optimizer(
+            self.model_config.optimizer, model, optimizer_args=self.model_config.optimizer_args
+        )
+        loss, num_of_training_data = self._plan_fit(model=model, dataset_key=dataset_key, loss_fn=loss_fn, device=device)
+        
+        ## multiply the weights to the model
+        with th.no_grad():
+            for parameter in model.parameters():
+                parameter.set_(parameter.data * num_of_training_data)
+
+        return [loss, num_of_training_data]
+    
     ## added by bobsonlin
     def model_share(self, encrypters):
         self._check_model_config()
@@ -126,6 +149,20 @@ class FederatedClient(ObjectStorage):
         )
         return data_loader
 
+    def _create_data_loader_mc(self, dataset_key: str, shuffle: bool = False):
+        data_range = range(len(self.datasets[dataset_key]))
+        if shuffle:
+            sampler = RandomSampler(data_range)
+        else:
+            sampler = SequentialSampler(data_range)
+        data_loader = th.utils.data.DataLoader(
+            self.datasets[dataset_key],
+            batch_size=self.model_config.batch_size,
+            sampler=sampler,
+            num_workers=0,
+        )
+        return data_loader
+    
     def _fit(self, model, dataset_key, loss_fn, device="cpu"):
         model.train()
         data_loader = self._create_data_loader(
@@ -153,6 +190,36 @@ class FederatedClient(ObjectStorage):
 
         return loss
 
+    def _plan_fit(self, model, dataset_key, loss_fn, device="cpu"):
+        num_of_training_data = len(self.datasets[dataset_key])
+        num_of_training_data = th.tensor(num_of_training_data)
+        data_loader = self._create_data_loader_mc(
+            dataset_key=dataset_key, shuffle=self.model_config.shuffle
+        )
+
+        loss = None
+        iteration_count = 0
+
+        for _ in range(self.model_config.epochs):
+            for (data, target) in data_loader:
+                # Set gradients to zero
+                self.optimizer.zero_grad()
+
+                # Update model
+                output = model(data.to(device))
+#                 pdb.set_trace()
+                loss = loss_fn(output, target.to(device))
+#                 pdb.set_trace()
+                loss.backward()
+                self.optimizer.step()
+
+                # Update and check interation count
+                iteration_count += 1
+                if iteration_count >= self.model_config.max_nr_batches >= 0:
+                    break
+
+        return loss, num_of_training_data
+    
     def evaluate(
         self,
         dataset_key: str,
@@ -188,7 +255,6 @@ class FederatedClient(ObjectStorage):
         eval_result = dict()
         model = self.get_obj(self.train_config._model_id).obj
         loss_fn = self.get_obj(self.train_config._loss_fn_id).obj
-        model.eval()
         device = "cuda" if device == "cuda" else "cpu"
         data_loader = self._create_data_loader(dataset_key=dataset_key, shuffle=False)
         test_loss = 0.0
@@ -226,6 +292,77 @@ class FederatedClient(ObjectStorage):
 
         return eval_result
 
+    def evaluate_mc(
+        self,
+        dataset_key: str,
+        return_histograms: bool = False,
+        nr_bins: int = -1,
+        return_loss: bool = True,
+        return_raw_accuracy: bool = True,
+        device: str = "cpu",
+    ):
+        """Evaluates a model on the local dataset as specified in the local TrainConfig object.
+
+        Args:
+            dataset_key: Identifier of the local dataset that shall be used for training.
+            return_histograms: If True, calculate the histograms of predicted classes.
+            nr_bins: Used together with calculate_histograms. Provide the number of classes/bins.
+            return_loss: If True, loss is calculated additionally.
+            return_raw_accuracy: If True, return nr_correct_predictions and nr_predictions
+            device: "cuda" or "cpu"
+
+        Returns:
+            Dictionary containing depending on the provided flags:
+                * loss: avg loss on data set, None if not calculated.
+                * nr_correct_predictions: number of correct predictions.
+                * nr_predictions: total number of predictions.
+                * histogram_predictions: histogram of predictions.
+                * histogram_target: histogram of target values in the dataset.
+        """
+        self._check_model_config()
+
+        if dataset_key not in self.datasets:
+            raise ValueError(f"Dataset {dataset_key} unknown.")
+            
+        eval_result = dict()
+        model = self.get_obj(self.model_config._model_id)
+        loss_fn = nll_loss
+        device = "cuda" if device == "cuda" else "cpu"
+        data_loader = self._create_data_loader_mc(dataset_key=dataset_key, shuffle=False)
+        test_loss = 0.0
+        correct = 0
+        if return_histograms:
+            hist_target = np.zeros(nr_bins)
+            hist_pred = np.zeros(nr_bins)
+
+        with th.no_grad():
+            for data, target in data_loader:
+                data, target = data.to(device), target.to(device)
+                output = model(data)
+                if return_loss:
+                    test_loss += loss_fn(output, target).item()  # sum up batch loss
+                pred = output.argmax(
+                    dim=1, keepdim=True
+                )  # get the index of the max log-probability
+                if return_histograms:
+                    hist, _ = np.histogram(target, bins=nr_bins, range=(0, nr_bins))
+                    hist_target += hist
+                    hist, _ = np.histogram(pred, bins=nr_bins, range=(0, nr_bins))
+                    hist_pred += hist
+                if return_raw_accuracy:
+                    correct += pred.eq(target.view_as(pred)).sum().item()
+        if return_loss:
+            test_loss /= len(data_loader.dataset)
+            eval_result["loss"] = test_loss
+        if return_raw_accuracy:
+            eval_result["nr_correct_predictions"] = correct
+            eval_result["nr_predictions"] = len(data_loader.dataset)
+        if return_histograms:
+            eval_result["histogram_predictions"] = hist_pred
+            eval_result["histogram_target"] = hist_target
+
+        return eval_result
+    
     def _log_msgs(self, value):
         self.log_msgs = value
         

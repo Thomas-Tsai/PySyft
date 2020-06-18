@@ -89,7 +89,6 @@ def federated_avg(models: Dict[Any, torch.nn.Module]) -> torch.nn.Module:
     model = scale_model(model, 1.0 / nr_models)
     return model
 
-
 def accuracy(pred_softmax, target):
     """Calculate the accuray of a given prediction.
 

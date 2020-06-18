@@ -323,6 +323,50 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
         # Return the deserialized response.
         return sy.serde.deserialize(response)
 
+    async def async_fit_mc(self, dataset_key: str, device: str = "cpu", return_ids: List[int] = None):
+        """Asynchronous call to fit function on the remote location.
+        Args:
+            dataset_key: Identifier of the dataset which shall be used for the training.
+            return_ids: List of return ids.
+        Returns:
+            See return value of the FederatedClient.fit() method.
+        """
+        if return_ids is None:
+            return_ids = [sy.ID_PROVIDER.pop()]
+
+        # Close the existing websocket connection in order to open a asynchronous connection
+        # This code is not tested with secure connections (wss protocol).
+        self.close()
+        async with websockets.connect(
+            self.url, timeout=TIMEOUT_INTERVAL, max_size=None, ping_timeout=TIMEOUT_INTERVAL
+        ) as websocket:
+            message = self.create_worker_command_message(
+                command_name="fit_mc", return_ids=return_ids, dataset_key=dataset_key, device=device
+            )
+
+            # Send the message and return the deserialized response.
+            serialized_message = sy.serde.serialize(message)
+
+            await websocket.send(serialized_message)
+            await websocket.recv()  # returned value will be None, so don't care
+
+        # Reopen the standard connection
+        self.connect()
+
+        # Send an object request message to retrieve the result tensor of the fit() method
+        msg = ObjectRequestMessage(return_ids[0], None, "")
+        serialized_message = sy.serde.serialize(msg)
+        response = self._send_msg(serialized_message)
+        loss = sy.serde.deserialize(response)
+        
+        msg = ObjectRequestMessage(return_ids[1], None, "")
+        serialized_message = sy.serde.serialize(msg)
+        response = self._send_msg(serialized_message)
+        num_of_training_data = sy.serde.deserialize(response)
+        
+        # Return the deserialized response.
+        return loss, num_of_training_data
+    
     ## added by bobsonlin
     async def async_model_share(self, encrypters, return_ids: List[int] = None):
         
@@ -359,6 +403,44 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
             response = sy.serde.deserialize(bin_response)
             enc_params.append(response)
         return enc_params
+
+    def evaluate_mc(
+        self,
+        dataset_key: str,
+        return_histograms: bool = False,
+        nr_bins: int = -1,
+        return_loss=True,
+        return_raw_accuracy: bool = True,
+        device: str = "cpu",
+    ):
+        """Call the evaluate() method on the remote worker (WebsocketServerWorker instance).
+
+        Args:
+            dataset_key: Identifier of the local dataset that shall be used for training.
+            return_histograms: If True, calculate the histograms of predicted classes.
+            nr_bins: Used together with calculate_histograms. Provide the number of classes/bins.
+            return_loss: If True, loss is calculated additionally.
+            return_raw_accuracy: If True, return nr_correct_predictions and nr_predictions
+            device: "cuda" or "cpu"
+
+        Returns:
+            Dictionary containing depending on the provided flags:
+                * loss: avg loss on data set, None if not calculated.
+                * nr_correct_predictions: number of correct predictions.
+                * nr_predictions: total number of predictions.
+                * histogram_predictions: histogram of predictions.
+                * histogram_target: histogram of target values in the dataset.
+        """
+
+        return self._send_msg_and_deserialize(
+            "evaluate_mc",
+            dataset_key=dataset_key,
+            return_histograms=return_histograms,
+            nr_bins=nr_bins,
+            return_loss=return_loss,
+            return_raw_accuracy=return_raw_accuracy,
+            device=device,
+        )
     
     def __str__(self) -> str:
         return "Federated Worker < id: " + self.id + " >"

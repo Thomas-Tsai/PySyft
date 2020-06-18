@@ -202,6 +202,11 @@ class Plan(AbstractObject):
             )
         else:
             # Add Placeholder on top of each arg
+#             args_placeholders = tuple(
+#                 PlaceHolder.create_from(arg, owner=sy.local_worker, role=self.role, tracing=True)
+#                 for arg in args
+#             )
+
             args = args_placeholders = tuple(
                 PlaceHolder.create_from(arg, owner=sy.local_worker, role=self.role, tracing=True)
                 for arg in args
@@ -218,7 +223,12 @@ class Plan(AbstractObject):
             if "torch" in forward_args:
                 framework_kwargs["torch"] = wrapped_torch
 
-            results = self.forward(*args, **framework_kwargs)
+            results = self.forward(*args_placeholders, **framework_kwargs)
+
+#             try:
+#                 results = self.forward(*args_placeholders, **framework_kwargs)
+#             except:
+#                 results = self.forward(*args, **framework_kwargs)
 
         # Disable tracing
         self.toggle_tracing(False)
@@ -304,7 +314,7 @@ class Plan(AbstractObject):
 
             return copied_layer
 
-    def __call__(self, *args):
+    def __call__(self, *input):
         """
         Calls a plan execution with some arguments.
 
@@ -318,10 +328,10 @@ class Plan(AbstractObject):
         """
         if self.forward is not None:
             if self.include_state:
-                args = (*args, self.state)
-            return self.forward(*args)
+                input = (*input, self.state)
+            return self.forward(*input)
         else:
-            result = self.role.execute(args)
+            result = self.role.execute(input)
             if len(result) == 1:
                 return result[0]
             return result
