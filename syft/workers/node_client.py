@@ -403,6 +403,47 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
             response = sy.serde.deserialize(bin_response)
             enc_params.append(response)
         return enc_params
+    
+    async def async_fit_sagg_mc(self, dataset_key: str, encrypters, device: str = "cpu", return_ids: List[int] = None):
+        """Asynchronous call to fit_sagg_mc function on the remote location.
+        Args:
+            dataset_key: Identifier of the dataset which shall be used for the training.
+            return_ids: List of return ids.
+        Returns:
+            See return value of the FederatedClient.fit() method.
+        """
+        if return_ids is None:
+            return_ids = [sy.ID_PROVIDER.pop()]
+
+        # Close the existing websocket connection in order to open a asynchronous connection
+        # This code is not tested with secure connections (wss protocol).
+        self.close()
+        async with websockets.connect(
+            self.url, timeout=TIMEOUT_INTERVAL, max_size=None, ping_timeout=TIMEOUT_INTERVAL
+        ) as websocket:
+            message = self.create_worker_command_message(
+                command_name="fit_sagg_mc", return_ids=return_ids, dataset_key=dataset_key, encrypters=encrypters, device=device
+            )
+
+            # Send the message and return the deserialized response.
+            serialized_message = sy.serde.serialize(message)
+
+            await websocket.send(serialized_message)
+            await websocket.recv()  # returned value will be None, so don't care
+
+        # Reopen the standard connection
+        self.connect()
+
+        # Send an object request message to retrieve the result tensor of the fit() method
+        result_list = []
+        for i in range(len(return_ids)):
+            msg = ObjectRequestMessage(return_ids[i], None, "")
+            serialized_message = sy.serde.serialize(msg)
+            bin_response = self._send_msg(serialized_message)
+            response = sy.serde.deserialize(bin_response)
+            result_list.append(response)
+        
+        return result_list
 
     def evaluate_mc(
         self,

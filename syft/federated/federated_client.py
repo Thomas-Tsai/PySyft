@@ -135,6 +135,40 @@ class FederatedClient(ObjectStorage):
 
         return enc_params
 
+    def fit_sagg_mc(self, dataset_key: str, encrypters, device: str = "cpu", **kwargs):
+        
+        self._check_model_config()
+        if dataset_key not in self.datasets:
+            raise ValueError(f"Dataset {dataset_key} unknown.")
+        
+        model = self.get_obj(self.model_config._model_id)
+        
+        # loss_fn = self.get_obj(self.model_config._loss_fn_id)
+        loss_fn = nll_loss
+        
+        self._build_optimizer(
+            self.model_config.optimizer, model, optimizer_args=self.model_config.optimizer_args
+        )
+        loss, num_of_training_data = self._plan_fit(model=model, dataset_key=dataset_key, loss_fn=loss_fn, device=device)
+        
+        ## multiply the weights to the model
+#         with th.no_grad():
+#             for parameter in model.parameters():
+#                 parameter.set_(parameter.data * num_of_training_data)
+                
+        ## encrypt model and multiply with weight
+        enc_params = []
+        params = list(model.parameters())
+        for param_index in range(len(params)):
+            fix_para = params[param_index].fix_precision(precision_fractional=5)
+            enc_para = fix_para.share(*encrypters)
+            enc_para = enc_para * int(num_of_training_data)
+            enc_params.append(enc_para)
+        
+        result_list = [loss, num_of_training_data]
+        result_list.extend(enc_params)
+        return result_list
+    
     def _create_data_loader(self, dataset_key: str, shuffle: bool = False):
         data_range = range(len(self.datasets[dataset_key]))
         if shuffle:
