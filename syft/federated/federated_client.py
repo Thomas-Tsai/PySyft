@@ -167,6 +167,9 @@ class FederatedClient(ObjectStorage):
         
         result_list = [loss, num_of_training_data]
         result_list.extend(enc_params)
+        
+        super().de_register_obj(model, _recurse_torch_objs=True)
+        
         return result_list
     
     def _create_data_loader(self, dataset_key: str, shuffle: bool = False):
@@ -395,6 +398,7 @@ class FederatedClient(ObjectStorage):
             eval_result["histogram_predictions"] = hist_pred
             eval_result["histogram_target"] = hist_target
 
+        super().de_register_obj(model, _recurse_torch_objs=True)
         return eval_result
     
     def _log_msgs(self, value):
