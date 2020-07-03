@@ -38,9 +38,14 @@ class FederatedClient(ObjectStorage):
             self.train_config = obj
             self.optimizer = None
         elif isinstance(obj, ModelConfig):
+            print("[trace] ModelConfigSend recv COORD", time.time())
             self.model_config = obj
             self.optimizer = None
         else:
+            if obj.id == "GlobalModel":
+                print("[trace] GlobalModelSend recv COORD", time.time())
+            elif obj.id == "LossFunc":
+                print("[trace] LossFuncSend recv COORD", time.time())
             super().set_obj(obj)
 
     def _check_train_config(self):
@@ -50,7 +55,7 @@ class FederatedClient(ObjectStorage):
     def _check_model_config(self):
         if self.model_config is None:
             raise ValueError("Operation needs ModelConfig object to be set.")
-    
+
     def _build_optimizer(
         self, optimizer_name: str, model, optimizer_args: dict
     ) -> th.optim.Optimizer:
@@ -96,30 +101,30 @@ class FederatedClient(ObjectStorage):
         )
 
         return self._fit(model=model, dataset_key=dataset_key, loss_fn=loss_fn, device=device)
-    
+
     def fit_mc(self, dataset_key: str, device: str = "cpu", **kwargs):
-        
+
         self._check_model_config()
         if dataset_key not in self.datasets:
             raise ValueError(f"Dataset {dataset_key} unknown.")
-        
+
         model = self.get_obj(self.model_config._model_id)
-        
+
         # loss_fn = self.get_obj(self.model_config._loss_fn_id)
         loss_fn = nll_loss
-        
+
         self._build_optimizer(
             self.model_config.optimizer, model, optimizer_args=self.model_config.optimizer_args
         )
         loss, num_of_training_data = self._plan_fit(model=model, dataset_key=dataset_key, loss_fn=loss_fn, device=device)
-        
+
         ## multiply the weights to the model
         with th.no_grad():
             for parameter in model.parameters():
                 parameter.set_(parameter.data * num_of_training_data)
 
         return [loss, num_of_training_data]
-    
+
     ## added by bobsonlin
     def model_share(self, encrypters):
         self._check_model_config()
@@ -136,26 +141,26 @@ class FederatedClient(ObjectStorage):
         return enc_params
 
     def fit_sagg_mc(self, dataset_key: str, encrypters, device: str = "cpu", **kwargs):
-        
+
         self._check_model_config()
         if dataset_key not in self.datasets:
             raise ValueError(f"Dataset {dataset_key} unknown.")
-        
+
         model = self.get_obj(self.model_config._model_id)
-        
+
         # loss_fn = self.get_obj(self.model_config._loss_fn_id)
         loss_fn = nll_loss
-        
+
         self._build_optimizer(
             self.model_config.optimizer, model, optimizer_args=self.model_config.optimizer_args
         )
         loss, num_of_training_data = self._plan_fit(model=model, dataset_key=dataset_key, loss_fn=loss_fn, device=device)
-        
+
         ## multiply the weights to the model
 #         with th.no_grad():
 #             for parameter in model.parameters():
 #                 parameter.set_(parameter.data * num_of_training_data)
-                
+
         ## encrypt model and multiply with weight
         enc_params = []
         params = list(model.parameters())
@@ -164,14 +169,14 @@ class FederatedClient(ObjectStorage):
             enc_para = fix_para.share(*encrypters)
             enc_para = enc_para * int(num_of_training_data)
             enc_params.append(enc_para)
-        
+
         result_list = [loss, num_of_training_data]
         result_list.extend(enc_params)
-        
+
         super().de_register_obj(model, _recurse_torch_objs=True)
-        
+
         return result_list
-    
+
     def _create_data_loader(self, dataset_key: str, shuffle: bool = False):
         data_range = range(len(self.datasets[dataset_key]))
         if shuffle:
@@ -199,7 +204,7 @@ class FederatedClient(ObjectStorage):
             num_workers=0,
         )
         return data_loader
-    
+
     def _fit(self, model, dataset_key, loss_fn, device="cpu"):
         model.train()
         data_loader = self._create_data_loader(
@@ -256,7 +261,7 @@ class FederatedClient(ObjectStorage):
                     break
 
         return loss, num_of_training_data
-    
+
     def evaluate(
         self,
         dataset_key: str,
@@ -360,7 +365,7 @@ class FederatedClient(ObjectStorage):
 
         if dataset_key not in self.datasets:
             raise ValueError(f"Dataset {dataset_key} unknown.")
-            
+
         eval_result = dict()
         model = self.get_obj(self.model_config._model_id)
         loss_fn = nll_loss
@@ -400,13 +405,13 @@ class FederatedClient(ObjectStorage):
 
         super().de_register_obj(model, _recurse_torch_objs=True)
         return eval_result
-    
+
     def _log_msgs(self, value):
         self.log_msgs = value
-        
+
     ## added by bobsonlin
     def list_objects(self, *args):
         return str(self._objects)
-    
+
     def list_tensors(self, *args):
         return str(self._tensors)
