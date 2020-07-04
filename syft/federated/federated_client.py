@@ -154,8 +154,12 @@ class FederatedClient(ObjectStorage):
         self._build_optimizer(
             self.model_config.optimizer, model, optimizer_args=self.model_config.optimizer_args
         )
+
+        training_start_time = time.time()
         loss, num_of_training_data = self._plan_fit(model=model, dataset_key=dataset_key, loss_fn=loss_fn, device=device)
 
+        training_end_time = time.time()
+        print("[trace] LocalTraining duration", self.id, training_end_time - training_start_time)
         ## multiply the weights to the model
 #         with th.no_grad():
 #             for parameter in model.parameters():
@@ -164,11 +168,24 @@ class FederatedClient(ObjectStorage):
         ## encrypt model and multiply with weight
         enc_params = []
         params = list(model.parameters())
+
+        encrypt_multiply_start_time = time.time()
+
         for param_index in range(len(params)):
             fix_para = params[param_index].fix_precision(precision_fractional=5)
+            encrypt_start = time.time()
             enc_para = fix_para.share(*encrypters)
+            encrypt_end = time.time()
+            print("[trace]", "EncryptParameter"+str(param_index), "duration", self.id, encrypt_end - encrypt_start)
+
+            multiply_start = time.time()
             enc_para = enc_para * int(num_of_training_data)
+            multiply_end = time.time()
+            print("[trace]", "MultiplyParameter"+str(param_index), "duration", self.id, multiply_end - multiply_start)
             enc_params.append(enc_para)
+
+        encrypt_multiply_end_time = time.time()
+        print("[trace] EncryptMultiply duration", self.id, encrypt_multiply_end_time - encrypt_multiply_start_time)
 
         result_list = [loss, num_of_training_data]
         result_list.extend(enc_params)

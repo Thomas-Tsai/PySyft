@@ -1,7 +1,7 @@
 import math
 import torch
 import warnings
-
+import time
 import syft as sy
 from syft.frameworks.torch.mpc import crypto_protocol
 from syft.frameworks.torch.mpc import spdz
@@ -272,7 +272,9 @@ class AdditiveSharingTensor(AbstractTensor):
 
         shares_dict = {}
         for share, owner in zip(shares, owners):
+            print("[trace]", "SendShare", "start", owner.id, time.time())
             share_ptr = share.send(owner, **no_wrap)
+            print("[trace]", "SendShare", "end", owner.id, time.time())
             shares_dict[share_ptr.location.id] = share_ptr
 
         self.child = shares_dict
