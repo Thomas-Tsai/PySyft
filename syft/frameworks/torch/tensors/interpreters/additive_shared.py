@@ -13,12 +13,13 @@ from syft.generic.tensor import AbstractTensor
 from syft.generic.frameworks.hook import hook_args
 from syft.generic.frameworks.overload import overloaded
 from syft.workers.abstract import AbstractWorker
+from syft.workers.virtual import VirtualWorker
 
 from syft_proto.frameworks.torch.tensors.interpreters.v1.additive_shared_pb2 import (
     AdditiveSharingTensor as AdditiveSharingTensorPB,
 )
 from syft_proto.types.syft.v1.id_pb2 import Id as IdPB
-
+import pdb
 no_wrap = {"no_wrap": True}
 
 
@@ -270,11 +271,20 @@ class AdditiveSharingTensor(AbstractTensor):
             self.child, n_workers=len(owners), random_type=self.torch_dtype
         )
 
+        ## TODO
+        for known_worker_id, known_worker in self.owner._known_workers.items():
+            if isinstance(self.owner._known_workers[known_worker_id], VirtualWorker):
+                if known_worker_id != "me":
+                    self_id = known_worker_id
+                    break
+
         shares_dict = {}
         for share, owner in zip(shares, owners):
-            print("[trace]", "SendShare", "start", owner.id, time.time())
+            share_num_id = share.id
+            print("[trace]", "SendShare", "start", owner.id, share_num_id, time.time())
+            share.id = "Share_"  "From_" + self_id + "_" + str(share_num_id)
             share_ptr = share.send(owner, **no_wrap)
-            print("[trace]", "SendShare", "end", owner.id, time.time())
+            print("[trace]", "SendShare", "end", owner.id, share.id, time.time())
             shares_dict[share_ptr.location.id] = share_ptr
 
         self.child = shares_dict

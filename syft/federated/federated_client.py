@@ -46,6 +46,10 @@ class FederatedClient(ObjectStorage):
                 print("[trace] GlobalModelSend recv COORD", time.time())
             elif obj.id == "LossFunc":
                 print("[trace] LossFuncSend recv COORD", time.time())
+            elif isinstance(obj.id, str):
+                recv_obj_time = time.time()
+                if len(obj.id) > 11 and obj.id[:10] == "Share_From":   ## len("Share_From_") == 11
+                    print("[trace]", "Get_" + obj.id, "recv", recv_obj_time)
             super().set_obj(obj)
 
     def _check_train_config(self):
