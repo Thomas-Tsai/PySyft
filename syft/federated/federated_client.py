@@ -49,9 +49,10 @@ class FederatedClient(ObjectStorage):
             elif isinstance(obj.id, str):
                 recv_obj_time = time.time()
                 if len(obj.id) > 11 and obj.id[:10] == "Share_From":   ## len("Share_From_") == 11
+                    print("[DEBUG]", "obj.id:", obj.id)
                     id_str_list = obj.id.split("_")
-                    worker_id = id_str_list[3]
-                    obj_id = id_str_list[4]
+                    worker_id = id_str_list[2]
+                    obj_id = id_str_list[3]
                     print("[trace]", "GetShare" + obj_id, "recv", worker_id, recv_obj_time)
             super().set_obj(obj)
 
