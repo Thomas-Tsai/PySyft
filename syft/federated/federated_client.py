@@ -42,13 +42,13 @@ class FederatedClient(ObjectStorage):
             self.model_config = obj
             self.optimizer = None
         else:
-            if obj.id == "GlobalModel":
-                print("[trace] GlobalModelSend recv COORD", time.time())
-            elif obj.id == "LossFunc":
-                print("[trace] LossFuncSend recv COORD", time.time())
-            elif isinstance(obj.id, str):
+            if isinstance(obj.id, str):
                 recv_obj_time = time.time()
-                if len(obj.id) > 11 and obj.id[:10] == "Share_From":   ## len("Share_From_") == 11
+                if obj.id == "GlobalModel":
+                    print("[trace] GlobalModelSend recv COORD", recv_obj_time)
+                elif obj.id == "LossFunc":
+                    print("[trace] LossFuncSend recv COORD", recv_obj_time)
+                elif len(obj.id) > 11 and obj.id[:10] == "Share_From":   ## len("Share_From_") == 11
                     id_str_list = obj.id.split("_")
                     worker_id = id_str_list[2]
                     obj_id = id_str_list[3]
