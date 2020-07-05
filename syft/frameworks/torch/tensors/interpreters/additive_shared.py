@@ -281,7 +281,7 @@ class AdditiveSharingTensor(AbstractTensor):
         for share, owner in zip(shares, owners):
             share_num_id = share.id
             share.id = "Share_"  "From_" + self_id + "_" + str(share_num_id)
-            print("[trace]", "SendShare_"+share_num_id, "start", owner.id, time.time())
+            print("[trace]", "SendShare_"+str(share_num_id), "start", owner.id, time.time())
             share_ptr = share.send(owner, **no_wrap)
             print("[trace]", "SendShare_"+str(share_num_id), "end", owner.id, time.time())
             shares_dict[share_ptr.location.id] = share_ptr
