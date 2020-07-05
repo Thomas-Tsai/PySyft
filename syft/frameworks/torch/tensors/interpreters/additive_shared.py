@@ -271,7 +271,6 @@ class AdditiveSharingTensor(AbstractTensor):
             self.child, n_workers=len(owners), random_type=self.torch_dtype
         )
 
-        ## TODO
         for known_worker_id, known_worker in self.owner._known_workers.items():
             if isinstance(self.owner._known_workers[known_worker_id], VirtualWorker):
                 if known_worker_id != "me":
@@ -281,10 +280,10 @@ class AdditiveSharingTensor(AbstractTensor):
         shares_dict = {}
         for share, owner in zip(shares, owners):
             share_num_id = share.id
-            print("[trace]", "SendShare", "start", owner.id, share_num_id, time.time())
             share.id = "Share_"  "From_" + self_id + "_" + str(share_num_id)
+            print("[trace]", "SendShare_"+share_num_id, "start", owner.id, time.time())
             share_ptr = share.send(owner, **no_wrap)
-            print("[trace]", "SendShare", "end", owner.id, share.id, time.time())
+            print("[trace]", "SendShare_"+share_num_id,, "end", owner.id, time.time())
             shares_dict[share_ptr.location.id] = share_ptr
 
         self.child = shares_dict

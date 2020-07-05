@@ -49,7 +49,10 @@ class FederatedClient(ObjectStorage):
             elif isinstance(obj.id, str):
                 recv_obj_time = time.time()
                 if len(obj.id) > 11 and obj.id[:10] == "Share_From":   ## len("Share_From_") == 11
-                    print("[trace]", "Get_" + obj.id, "recv", recv_obj_time)
+                    id_str_list = obj.id.split("_")
+                    worker_id = id_str_list[3]
+                    obj_id = id_str_list[4]
+                    print("[trace]", "GetShare" + obj_id, "recv", worker_id, recv_obj_time)
             super().set_obj(obj)
 
     def _check_train_config(self):
