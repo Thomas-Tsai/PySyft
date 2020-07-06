@@ -17,6 +17,7 @@ from syft.federated.federated_client import FederatedClient
 from syft.workers.websocket_client import WebsocketClientWorker
 from syft.grid.authentication.credential import AbstractCredential
 import pdb
+import time
 
 TIMEOUT_INTERVAL = 60
 
@@ -358,18 +359,18 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
         serialized_message = sy.serde.serialize(msg)
         response = self._send_msg(serialized_message)
         loss = sy.serde.deserialize(response)
-        
+
         msg = ObjectRequestMessage(return_ids[1], None, "")
         serialized_message = sy.serde.serialize(msg)
         response = self._send_msg(serialized_message)
         num_of_training_data = sy.serde.deserialize(response)
-        
+
         # Return the deserialized response.
         return loss, num_of_training_data
-    
+
     ## added by bobsonlin
     async def async_model_share(self, encrypters, return_ids: List[int] = None):
-        
+
         if return_ids is None:
             return_ids = [sy.ID_PROVIDER.pop()]
 
@@ -381,11 +382,11 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
                 command_name="model_share", encrypters=encrypters, return_ids=return_ids)
             serialized_message = sy.serde.serialize(message)
             await websocket.send(serialized_message)
-            await websocket.recv()    ## make sure that the command is executed 
+            await websocket.recv()    ## make sure that the command is executed
             # bin_response = await websocket.recv()
             # response = sy.serde.deserialize(bin_response)
             # print("response:", response)
-            
+
         # Reopen the standard connection
         self.connect()
 
@@ -394,7 +395,7 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
 #         serialized_message = sy.serde.serialize(msg)
 #         bin_response = self._send_msg(serialized_message)
 #         response = sy.serde.deserialize(bin_response)
-        
+
         enc_params = []
         for i in range(len(return_ids)):
             msg = ObjectRequestMessage(return_ids[i], None, "")
@@ -403,7 +404,7 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
             response = sy.serde.deserialize(bin_response)
             enc_params.append(response)
         return enc_params
-    
+
     async def async_fit_sagg_mc(self, dataset_key: str, encrypters, device: str = "cpu", return_ids: List[int] = None):
         """Asynchronous call to fit_sagg_mc function on the remote location.
         Args:
@@ -436,13 +437,18 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
 
         # Send an object request message to retrieve the result tensor of the fit() method
         result_list = []
+        retrieve_start_time = time.time()
+
         for i in range(len(return_ids)):
             msg = ObjectRequestMessage(return_ids[i], None, "")
             serialized_message = sy.serde.serialize(msg)
             bin_response = self._send_msg(serialized_message)
             response = sy.serde.deserialize(bin_response)
             result_list.append(response)
-        
+
+        retrieve_end_time = time.time()
+        print("[trace]", "RetrieveTime", "duration", self.id, retrieve_end_time - retrieve_start_time)
+
         return result_list
 
     def evaluate_mc(
@@ -482,6 +488,6 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
             return_raw_accuracy=return_raw_accuracy,
             device=device,
         )
-    
+
     def __str__(self) -> str:
         return "Federated Worker < id: " + self.id + " >"
