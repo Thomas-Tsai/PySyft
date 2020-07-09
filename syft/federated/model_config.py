@@ -4,6 +4,7 @@ import weakref
 import torch
 import torch.nn as nn
 import pdb
+import time
 
 import syft as sy
 from syft.execution.plan import Plan
@@ -113,17 +114,23 @@ class ModelConfig:
             A weakref instance.
         """
         # Send traced model
+        print("[trace] GlobalModelSend", "start", location.id, time.time())
         self.model_ptr = self.model.send(location)
+        print("[trace] GlobalModelSend", "end", location.id, time.time())
         self._model_id = self.model_ptr.id_at_location
 #         self.model_ptr, self._model_id = self._wrap_and_send_obj(self.model, location)
 
         # Send loss function
+        print("[trace] LossFuncSend", "start", location.id, time.time())
         self.loss_fn_ptr = self.loss_fn.send(location)
+        print("[trace] LossFuncSend", "end", location.id, time.time())
         self._loss_fn_id = self.loss_fn_ptr.id_at_location
 #         self.loss_fn_ptr, self._loss_fn_id = self._wrap_and_send_obj(self.loss_fn, location)
 
         # Send train configuration itself
+        print("[trace] ModelConfigSend", "start", location.id, time.time())
         ptr = self.owner.send(self, location)
+        print("[trace] ModelConfigSend", "end", location.id, time.time())
 
         return ptr
 
