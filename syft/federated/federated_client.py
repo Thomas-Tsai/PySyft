@@ -267,22 +267,28 @@ class FederatedClient(ObjectStorage):
         iteration_count = 0
 
         for _ in range(self.model_config.epochs):
-            for (data, target) in data_loader:
+            # iter_start = time.time()
+            for batch_idx, (data, target) in enumerate(data_loader):
+                # batch_start = time.time()
+                # print("[DEBUG]", "Iter time:", batch_start - iter_start)
+
                 # Set gradients to zero
                 self.optimizer.zero_grad()
 
                 # Update model
                 output = model(data.to(device))
-#                 pdb.set_trace()
                 loss = loss_fn(output, target.to(device))
-#                 pdb.set_trace()
                 loss.backward()
                 self.optimizer.step()
+
+                # batch_end = time.time()
+                # print("[DEBUG]", "Batch", batch_idx, "   ", "Time:", batch_end - batch_start)
 
                 # Update and check interation count
                 iteration_count += 1
                 if iteration_count >= self.model_config.max_nr_batches >= 0:
                     break
+                # iter_start = time.time()
 
         return loss, num_of_training_data
 
