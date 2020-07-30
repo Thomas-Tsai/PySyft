@@ -179,7 +179,7 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
             Returns:
                 node_response (bytes) : response payload.
         """
-        # print("[PROF]", "MessageSize", len(message), "bytes")
+        print("[PROF]", "MessageSize", len(message), "bytes")
         # print("[PROF]", "NC_SEND_BIN", "start", "sender", time.time())
         self.ws.send_binary(message)
         # print("[PROF]", "NC_SEND_BIN", "end", "sender", time.time())
