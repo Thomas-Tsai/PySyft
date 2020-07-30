@@ -26,7 +26,7 @@ from syft.workers.abstract import AbstractWorker
 from syft.frameworks.torch.tensors.interpreters.autograd import AutogradTensor
 
 from syft_proto.execution.v1.plan_pb2 import Plan as PlanPB
-
+import time
 
 class func2plan(object):
     """Decorator which converts a function to a plan.

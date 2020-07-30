@@ -41,7 +41,7 @@ from syft.exceptions import ObjectNotFoundError
 from syft.exceptions import PlanCommandUnknownError
 from syft.exceptions import ResponseSignatureError
 from syft.exceptions import WorkerNotFoundException
-import pdb
+import pdb, time
 
 # this if statement avoids circular imports between base.py and pointer.py
 if TYPE_CHECKING:
@@ -284,7 +284,9 @@ class BaseWorker(AbstractWorker, ObjectStorage):
             print(f"worker {self} sending {message} to {location}")
 
         # Step 1: serialize the message to a binary
+        # print("[PROF]", "SERIALIZATION", "start", time.time())
         bin_message = sy.serde.serialize(message, worker=self)
+        # print("[PROF]", "SERIALIZATION", "end", time.time())
 
         # Step 2: send the message and wait for a response
         bin_response = self._send_msg(bin_message, location)

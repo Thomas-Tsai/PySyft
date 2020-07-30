@@ -148,6 +148,12 @@ class FederatedClient(ObjectStorage):
             encrypt_end = time.time()
             print("[trace]", "EncryptParameter"+str(param_index), "duration", self.id, encrypt_end - encrypt_start)
 
+            multiply_start = time.time()
+            enc_para = enc_para * 100
+            multiply_end = time.time()
+            print("[trace]", "MultiplyParameter"+str(param_index), "duration", self.id, multiply_end - multiply_start)
+
+
             enc_params.append(enc_para)
 
         return enc_params
