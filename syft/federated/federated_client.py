@@ -133,7 +133,7 @@ class FederatedClient(ObjectStorage):
         return [loss, num_of_training_data]
 
     ## added by bobsonlin
-    def model_share(self, encrypters):
+    def model_share_mul(self, encrypters):
         self._check_model_config()
         model = self.get_obj(self.model_config._model_id)
 
@@ -157,6 +157,27 @@ class FederatedClient(ObjectStorage):
             enc_params.append(enc_para)
 
         return enc_params
+
+    ## added by bobsonlin
+    def model_share(self, encrypters):
+        self._check_model_config()
+        model = self.get_obj(self.model_config._model_id)
+
+        ## generate shares
+        enc_params = []
+        params = list(model.parameters())
+        for param_index in range(len(params)):
+            fix_para = params[param_index].fix_precision(precision_fractional=5)
+
+            encrypt_start = time.time()
+            enc_para = fix_para.share(*encrypters)
+            encrypt_end = time.time()
+            print("[trace]", "EncryptParameter"+str(param_index), "duration", self.id, encrypt_end - encrypt_start)
+
+            enc_params.append(enc_para)
+
+        return enc_params
+
 
     def fit_sagg_mc(self, dataset_key: str, encrypters, device: str = "cpu", **kwargs):
 
