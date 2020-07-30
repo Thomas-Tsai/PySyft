@@ -172,7 +172,7 @@ class FederatedClient(ObjectStorage):
             encrypt_start = time.time()
             enc_para = fix_para.share(*encrypters)
             encrypt_end = time.time()
-            print("[trace]", "EncryptParameter"+str(param_index), "duration", params[param_index].shape, encrypt_end - encrypt_start)
+            print("[trace]", "EncryptParameter"+str(param_index), "duration", params[param_index].shape, encrypt_end - encrypt_start, encrypt_start, encrypt_end)
 
             enc_params.append(enc_para)
 
