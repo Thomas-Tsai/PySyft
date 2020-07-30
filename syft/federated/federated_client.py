@@ -142,7 +142,12 @@ class FederatedClient(ObjectStorage):
         params = list(model.parameters())
         for param_index in range(len(params)):
             fix_para = params[param_index].fix_precision(precision_fractional=5)
+
+            encrypt_start = time.time()
             enc_para = fix_para.share(*encrypters)
+            encrypt_end = time.time()
+            print("[trace]", "EncryptParameter"+str(param_index), "duration", self.id, encrypt_end - encrypt_start)
+
             enc_params.append(enc_para)
 
         return enc_params
