@@ -285,6 +285,7 @@ class BaseWorker(AbstractWorker, ObjectStorage):
 
         # Step 1: serialize the message to a binary
         bin_message = sy.serde.serialize(message, worker=self)
+        # print("[PROF]", "MessageSize", len(message), "bytes")
 
         # Step 2: send the message and wait for a response
         bin_response = self._send_msg(bin_message, location)
