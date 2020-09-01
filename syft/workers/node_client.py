@@ -372,52 +372,6 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
         # Return the deserialized response.
         return loss, num_of_training_data
 
-    ## added by bobsonlin
-    async def async_fit2_mc(self, model_config, dataset_key: str, device: str = "cpu", return_ids: List[int] = None):
-        """Asynchronous call to fit function on the remote location.
-        Args:
-            dataset_key: Identifier of the dataset which shall be used for the training.
-            return_ids: List of return ids.
-        Returns:
-            See return value of the FederatedClient.fit() method.
-        """
-        if return_ids is None:
-            return_ids = [sy.ID_PROVIDER.pop()]
-
-        # Close the existing websocket connection in order to open a asynchronous connection
-        # This code is not tested with secure connections (wss protocol).
-        self.close()
-        async with websockets.connect(
-            self.url, timeout=TIMEOUT_INTERVAL, max_size=None, ping_timeout=TIMEOUT_INTERVAL
-        ) as websocket:
-            message = self.create_worker_command_message(
-                command_name="fit_mc", return_ids=return_ids, dataset_key=dataset_key, device=device
-            )
-
-            # Send the message and return the deserialized response.
-            serialized_message = sy.serde.serialize(message)
-
-            await websocket.send(serialized_message)
-            await websocket.recv()  # returned value will be None, so don't care
-
-        # Reopen the standard connection
-        self.connect()
-
-        # Send an object request message to retrieve the result tensor of the fit() method
-        msg = ObjectRequestMessage(return_ids[0], None, "")
-        serialized_message = sy.serde.serialize(msg)
-        response = self._send_msg(serialized_message)
-        loss = sy.serde.deserialize(response)
-
-        msg = ObjectRequestMessage(return_ids[1], None, "")
-        serialized_message = sy.serde.serialize(msg)
-        response = self._send_msg(serialized_message)
-        num_of_training_data = sy.serde.deserialize(response)
-
-        # Return the deserialized response.
-        return loss, num_of_training_data
-
-
 
     ## added by bobsonlin
     async def async_model_share(self, encrypters, return_ids: List[int] = None):
@@ -501,6 +455,55 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
         print("[trace]", "RetrieveTime", "duration", self.id, retrieve_end_time - retrieve_start_time)
 
         return result_list
+
+    ## added by bobsonlin
+    async def async_fit2_sagg_mc(self, model_config, dataset_key: str, encrypters, device: str = "cpu", return_ids: List[int] = None):
+        """Asynchronous call to fit_sagg_mc function on the remote location.
+        Args:
+            dataset_key: Identifier of the dataset which shall be used for the training.
+            return_ids: List of return ids.
+        Returns:
+            See return value of the FederatedClient.fit() method.
+        """
+        if return_ids is None:
+            return_ids = [sy.ID_PROVIDER.pop()]
+
+        # Close the existing websocket connection in order to open a asynchronous connection
+        # This code is not tested with secure connections (wss protocol).
+        self.close()
+        async with websockets.connect(
+            self.url, timeout=TIMEOUT_INTERVAL, max_size=None, ping_timeout=TIMEOUT_INTERVAL
+        ) as websocket:
+            message = self.create_worker_command_message(
+                command_name="fit_sagg_mc", return_ids=return_ids, dataset_key=dataset_key, encrypters=encrypters, device=device
+            )
+
+            # Send the message and return the deserialized response.
+            serialized_message = sy.serde.serialize(message)
+
+            await websocket.send(serialized_message)
+            await websocket.recv()  # returned value will be None, so don't care
+
+        # Reopen the standard connection
+        self.connect()
+
+        # Send an object request message to retrieve the result tensor of the fit() method
+        result_list = []
+        retrieve_start_time = time.time()
+
+        for i in range(len(return_ids)):
+            msg = ObjectRequestMessage(return_ids[i], None, "")
+            serialized_message = sy.serde.serialize(msg)
+            bin_response = self._send_msg(serialized_message)
+            response = sy.serde.deserialize(bin_response)
+            result_list.append(response)
+
+        retrieve_end_time = time.time()
+        print("[trace]", "RetrieveTime", "duration", self.id, retrieve_end_time - retrieve_start_time)
+
+        return result_list
+
+
 
     def evaluate_mc(
         self,
