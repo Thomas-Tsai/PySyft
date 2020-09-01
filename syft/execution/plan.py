@@ -24,9 +24,9 @@ from syft.generic.object import AbstractObject
 from syft.generic.pointers.pointer_plan import PointerPlan
 from syft.workers.abstract import AbstractWorker
 from syft.frameworks.torch.tensors.interpreters.autograd import AutogradTensor
-
+from syft.messaging.message import ObjectMessage
 from syft_proto.execution.v1.plan_pb2 import Plan as PlanPB
-
+import pdb
 
 class func2plan(object):
     """Decorator which converts a function to a plan.
@@ -388,6 +388,52 @@ class Plan(AbstractObject):
             pointer = sy.PointerPlan(location=locations, id_at_location=ids_at_location)
 
         return pointer
+
+
+    async def async_send(self, *locations: AbstractWorker) -> PointerPlan:
+        """Send plan to locations.
+
+        If the plan was not built locally it will raise an exception.
+        If `force` = true plan is going to be sent either way.
+
+        Args:
+            locations: List of workers.
+            force: A boolean indicating if this action should be forced.
+        """
+        if not self.is_built:
+            raise RuntimeError("A plan needs to be built before being sent to a worker.")
+
+        if len(locations) == 1:
+            websocket = locations[0]
+
+            # Send the Plan
+            msg = ObjectMessage(self)
+            bin_message = sy.serde.serialize(msg)
+            await websocket.send(bin_message)
+            await websocket.recv()
+
+            pointer = None
+            # self.pointers[location] = pointer
+
+        else:
+            ids_at_location = []
+            for location in locations:
+                if location in self.pointers:
+                    # Use the pointer that was already sent
+                    pointer = self.pointers[location]
+                else:
+                    # Send the Plan
+                    pointer = self.owner.send(self, workers=location)
+
+                    self.pointers[location] = pointer
+
+                ids_at_location.append(pointer.id_at_location)
+
+            pointer = sy.PointerPlan(location=locations, id_at_location=ids_at_location)
+
+        return pointer
+
+
 
     def get_args_shape(self):
         """Returns input tensors shapes"""

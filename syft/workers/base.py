@@ -429,6 +429,90 @@ class BaseWorker(AbstractWorker, ObjectStorage):
 
         return pointer
 
+    async def async_send(
+        self,
+        obj: Union[FrameworkTensorType, AbstractTensor],
+        websocket,
+        ptr_id: Union[str, int] = None,
+        garbage_collect_data=None,
+        requires_grad=False,
+        create_pointer=True,
+        **kwargs,
+    ) -> ObjectPointer:
+        """Sends tensor to the worker(s).
+
+        Send a syft or torch tensor/object and its child, sub-child, etc (all the
+        syft chain of children) to a worker, or a list of workers, with a given
+        remote storage address.
+
+        Args:
+            obj: A syft/framework tensor/object to send.
+            workers: A BaseWorker object representing the worker(s) that will
+                receive the object.
+            ptr_id: An optional string or integer indicating the remote id of
+                the object on the remote worker(s).
+            garbage_collect_data: argument passed down to create_pointer()
+            requires_grad: Default to False. If true, whenever the remote value of this tensor
+                will have its gradient updated (for example when calling .backward()), a call
+                will be made to set back the local gradient value.
+            create_pointer: if set to False, no pointer to the remote value will be built.
+
+        Example:
+            >>> import torch
+            >>> import syft as sy
+            >>> hook = sy.TorchHook(torch)
+            >>> bob = sy.VirtualWorker(hook)
+            >>> x = torch.Tensor([1, 2, 3, 4])
+            >>> x.send(bob, 1000)
+            Will result in bob having the tensor x with id 1000
+
+        Returns:
+            A PointerTensor object representing the pointer to the remote worker(s).
+        """
+
+        if requires_grad:
+            obj.origin = self.id
+            obj.id_at_origin = obj.id
+
+        # Send the object
+        # self.send_obj(obj, worker)
+        obj_message = ObjectMessage(obj)
+        bin_message = sy.serde.serialize(obj_message)
+        await websocket.send(bin_message)
+        await websocket.recv()
+
+        if requires_grad:
+            obj.origin = None
+            obj.id_at_origin = None
+
+        # If we don't need to create the pointer
+        if not create_pointer:
+            return None
+
+        # Create the pointer if needed
+        if hasattr(obj, "create_pointer") and not isinstance(
+            obj, sy.Protocol
+        ):  # TODO: this seems like hack to check a type
+            if ptr_id is None:  # Define a remote id if not specified
+                ptr_id = sy.ID_PROVIDER.pop()
+
+            pointer = type(obj).create_pointer(
+                obj,
+                owner=self,
+                location=worker,
+                id_at_location=obj.id,
+                register=True,
+                ptr_id=ptr_id,
+                garbage_collect_data=garbage_collect_data,
+                **kwargs,
+            )
+        else:
+            pointer = obj
+
+        return pointer
+
+
+
     def handle_object_msg(self, obj_msg: ObjectMessage):
         # This should be a good seam for separating Workers from ObjectStorage (someday),
         # so that Workers have ObjectStores instead of being ObjectStores. That would open

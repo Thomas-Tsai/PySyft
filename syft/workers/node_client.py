@@ -474,6 +474,9 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
         async with websockets.connect(
             self.url, timeout=TIMEOUT_INTERVAL, max_size=None, ping_timeout=TIMEOUT_INTERVAL
         ) as websocket:
+
+            await model_config.async_send(websocket, self.id)
+
             message = self.create_worker_command_message(
                 command_name="fit_sagg_mc", return_ids=return_ids, dataset_key=dataset_key, encrypters=encrypters, device=device
             )

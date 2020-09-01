@@ -118,14 +118,12 @@ class ModelConfig:
         self.model_ptr = self.model.send(location)
         print("[trace] GlobalModelSend", "end", location.id, time.time())
         self._model_id = self.model_ptr.id_at_location
-#         self.model_ptr, self._model_id = self._wrap_and_send_obj(self.model, location)
 
         # Send loss function
         print("[trace] LossFuncSend", "start", location.id, time.time())
         self.loss_fn_ptr = self.loss_fn.send(location)
         print("[trace] LossFuncSend", "end", location.id, time.time())
         self._loss_fn_id = self.loss_fn_ptr.id_at_location
-#         self.loss_fn_ptr, self._loss_fn_id = self._wrap_and_send_obj(self.loss_fn, location)
 
         # Send train configuration itself
         print("[trace] ModelConfigSend", "start", location.id, time.time())
@@ -133,6 +131,51 @@ class ModelConfig:
         print("[trace] ModelConfigSend", "end", location.id, time.time())
 
         return ptr
+
+
+    async def async_send(self, websocket, worker_id) -> weakref:
+        """Gets the pointer to a new remote object.
+        One of the most commonly used methods in PySyft, this method serializes
+        the object upon which it is called (self), sends the object to a remote
+        worker, creates a pointer to that worker, and then returns that pointer
+        from this function.
+        Args:
+            location: The BaseWorker object which you want to send this object
+                to. Note that this is never actually the BaseWorker but instead
+                a class which instantiates the BaseWorker abstraction.
+        Returns:
+            A weakref instance.
+        """
+        # Send traced model
+        print("[trace] GlobalModelSend", "start", worker_id, time.time())
+        self.model_ptr = await self.model.async_send(websocket)
+        print("[trace] GlobalModelSend", "end", worker_id, time.time())
+
+        if self.model_ptr is None:
+            self._model_id = "GlobalModel"
+        else:
+            self._model_id = self.model_ptr.id_at_location
+
+        # Send loss function
+        print("[trace] LossFuncSend", "start", worker_id, time.time())
+        self.loss_fn_ptr = await self.loss_fn.async_send(websocket)
+        print("[trace] LossFuncSend", "end", worker_id, time.time())
+
+        if self.loss_fn_ptr is None:
+            self._loss_fn_id = "LossFunc"
+        else:
+            self._loss_fn_id = self.loss_fn_ptr.id_at_location
+
+        # pdb.set_trace()
+        # Send train configuration itself
+        print("[trace] ModelConfigSend", "start", worker_id, time.time())
+        ptr = await self.owner.async_send(self, websocket)
+        print("[trace] ModelConfigSend", "end", worker_id, time.time())
+        # pdb.set_trace()
+
+        return ptr
+
+
 
     def get(self, location):
         return self.owner.request_obj(self, location)
