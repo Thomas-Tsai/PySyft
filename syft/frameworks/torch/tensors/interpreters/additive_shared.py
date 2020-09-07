@@ -271,11 +271,15 @@ class AdditiveSharingTensor(AbstractTensor):
             self.child, n_workers=len(owners), random_type=self.torch_dtype
         )
 
+        self_id = None
         for known_worker_id, known_worker in self.owner._known_workers.items():
             if isinstance(self.owner._known_workers[known_worker_id], VirtualWorker):
                 if known_worker_id != "me":
                     self_id = known_worker_id
                     break
+
+        if self_id is None:
+            self_id = "me"
 
         shares_dict = {}
         for share, owner in zip(shares, owners):
