@@ -19,7 +19,7 @@ from syft.grid.authentication.credential import AbstractCredential
 import pdb
 import time
 
-TIMEOUT_INTERVAL = 60
+TIMEOUT_INTERVAL = 3600
 
 class NodeClient(WebsocketClientWorker, FederatedClient):
     """Federated Node Client."""

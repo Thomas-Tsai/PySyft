@@ -22,7 +22,7 @@ monkey.patch_all()
 
 logger = logging.getLogger(__name__)
 
-TIMEOUT_INTERVAL = 60
+TIMEOUT_INTERVAL = 3600
 
 
 class WebsocketClientWorker(BaseWorker):
