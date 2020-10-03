@@ -16,6 +16,8 @@ from syft.codes import REQUEST_MSG, RESPONSE_MSG
 from syft.federated.federated_client import FederatedClient
 from syft.workers.websocket_client import WebsocketClientWorker
 from syft.grid.authentication.credential import AbstractCredential
+import ssl
+import pathlib
 import pdb
 import time
 
@@ -471,10 +473,18 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
         # Close the existing websocket connection in order to open a asynchronous connection
         # This code is not tested with secure connections (wss protocol).
         self.close()
-        async with websockets.connect(
-            self.url, timeout=TIMEOUT_INTERVAL, max_size=None, ping_timeout=TIMEOUT_INTERVAL
-        ) as websocket:
 
+        ## create args_ dict
+        args_ = {"max_size": None, "timeout": TIMEOUT_INTERVAL, "ping_timeout": TIMEOUT_INTERVAL}
+        if self.secure:
+            args_["ssl"] = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            args_["ssl"].check_hostname = False
+            args_["ssl"].verify_mode = ssl.CERT_NONE
+
+        # async with websockets.connect(
+        #     self.url, timeout=TIMEOUT_INTERVAL, max_size=None, ping_timeout=TIMEOUT_INTERVAL,
+        # ) as websocket:
+        async with websockets.connect(self.url, **args_) as websocket:
             send_global_inf_start = time.time()
             await model_config.async_send(websocket, self.id)
             print("[PROF]", "GlobalInformationSend", "duration", self.id, time.time() - send_global_inf_start)
