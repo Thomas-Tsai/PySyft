@@ -181,12 +181,12 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
             Returns:
                 node_response (bytes) : response payload.
         """
-        # print("[PROF]", "MessageSize", len(message), "bytes")
-        # print("[PROF]", "NC_SEND_BIN", "start", "sender", time.time())
+        print("[PROF]", "MessageSize", len(message), "bytes")
+        print("[PROF]", "NC_SEND_BIN", "start", "sender", time.time())
         self.ws.send_binary(message)
-        # print("[PROF]", "NC_SEND_BIN", "end", "sender", time.time())
+        print("[PROF]", "NC_SEND_BIN", "end", "sender", time.time())
         response = self.ws.recv()
-        # print("[PROF]", "NC_WS_RECV", "end", "sender", time.time())
+        print("[PROF]", "NC_WS_RECV", "end", "sender", time.time())
         return response
 
     def _return_bool_result(self, result, return_key=None):
@@ -487,7 +487,7 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
         async with websockets.connect(self.url, **args_) as websocket:
             send_global_inf_start = time.time()
             await model_config.async_send(websocket, self.id)
-            print("[PROF]", "GlobalInformationSend", "duration", self.id, time.time() - send_global_inf_start)
+            print("[trace]", "GlobalInformationSend", "duration", self.id, time.time() - send_global_inf_start)
 
             message = self.create_worker_command_message(
                 command_name="fit_sagg_mc", return_ids=return_ids, dataset_key=dataset_key, encrypters=encrypters, device=device
