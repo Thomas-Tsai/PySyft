@@ -26,6 +26,9 @@ from syft.workers.abstract import AbstractWorker
 from syft.frameworks.torch.tensors.interpreters.autograd import AutogradTensor
 from syft.messaging.message import ObjectMessage
 from syft_proto.execution.v1.plan_pb2 import Plan as PlanPB
+
+from collections import OrderedDict
+import torch.nn as nn
 import pdb
 
 class func2plan(object):
@@ -141,6 +144,9 @@ class Plan(AbstractObject):
             self.forward = forward_func or None
 
         self.__name__ = self.__repr__()  # For PyTorch jit tracing compatibility
+
+        ## modules
+        self._modules = OrderedDict()
 
         # List of available translations
         self.translations = []
@@ -279,10 +285,33 @@ class Plan(AbstractObject):
 
         return plan_copy
 
+    def named_modules(self, memo=None, prefix=''):
+        if memo is None:
+            memo = set()
+        if self not in memo:
+            memo.add(self)
+            yield prefix, self
+            for name, module in self._modules.items():
+                if module is None:
+                    continue
+                submodule_prefix = prefix + ('.' if prefix else '') + name
+                for m in module.named_modules(memo, submodule_prefix):
+                    yield m
+
+    def modules(self):
+        for name, module in self.named_modules():
+            yield module
+
     def __setattr__(self, name, value):
         """Add new tensors or parameter attributes to the state and register them
         in the owner's registry
         """
+
+        def remove_from(*dicts):
+            for d in dicts:
+                if name in d:
+                    del d[name]
+
         if isinstance(value, torch.jit.ScriptModule):
             object.__setattr__(self, name, value)
         elif isinstance(value, FrameworkTensor):
@@ -294,6 +323,14 @@ class Plan(AbstractObject):
             self.state_attributes[name] = value
         else:
             object.__setattr__(self, name, value)
+
+        modules = self.__dict__.get('_modules')
+        if isinstance(value, nn.Module):
+            if modules is None:
+                raise AttributeError(
+                    "cannot assign module before Module.__init__() call")
+            remove_from(self.__dict__)
+            modules[name] = value
 
     def __getattr__(self, name):
         if name not in self.state_attributes:
