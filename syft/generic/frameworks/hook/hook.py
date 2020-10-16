@@ -18,7 +18,7 @@ from syft.workers.base import BaseWorker
 
 from syft.exceptions import route_method_exception
 from syft.exceptions import TensorsNotCollocatedException
-
+import pdb
 
 class FrameworkHook(ABC):
     @abstractmethod
@@ -576,6 +576,18 @@ class FrameworkHook(ABC):
             Operate the hooking
             """
 
+            # args preprocess
+            # if cmd_name == "torch.nn.functional.batch_norm":
+            from syft.execution.placeholder import PlaceHolder
+            from syft.execution.role import Role
+            args_list = list()
+            for arg in args:
+                if not isinstance(arg, PlaceHolder):
+                    if hasattr(arg, "shape"):
+                        arg = PlaceHolder(owner=syft.local_worker, role=Role(), tracing=True).instantiate(arg)
+                args_list.append(arg)
+            args = tuple(args_list)
+
             try:
                 tensor_type = (
                     type(args[0]) if not isinstance(args[0], (tuple, list)) else type(args[0][0])
@@ -589,6 +601,7 @@ class FrameworkHook(ABC):
                 handle_func_command = tensor_type.handle_func_command
             except AttributeError:
                 handle_func_command = syft.framework.Tensor.handle_func_command
+
 
             response = handle_func_command(command)
 
