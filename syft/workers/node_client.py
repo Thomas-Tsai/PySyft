@@ -486,7 +486,7 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
         # ) as websocket:
         async with websockets.connect(self.url, **args_) as websocket:
             send_global_inf_start = time.time()
-            await model_config.async_send(websocket, self.id)
+            await model_config.async_send(websocket, self.id, model_config.model.id)
             print("[PROF]", "GlobalInformationSend", "duration", self.id, time.time() - send_global_inf_start)
 
             message = self.create_worker_command_message(

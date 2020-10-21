@@ -133,7 +133,7 @@ class ModelConfig:
         return ptr
 
 
-    async def async_send(self, websocket, worker_id) -> weakref:
+    async def async_send(self, websocket, worker_id, model_id = None) -> weakref:
         """Gets the pointer to a new remote object.
         One of the most commonly used methods in PySyft, this method serializes
         the object upon which it is called (self), sends the object to a remote
@@ -152,7 +152,10 @@ class ModelConfig:
         print("[trace] GlobalModelSend", "end", worker_id, time.time())
 
         if self.model_ptr is None:
-            self._model_id = "GlobalModel"
+            if model_id is None:
+                self._model_id = "GlobalModel"
+            else:
+                self._model_id = model_id
         else:
             self._model_id = self.model_ptr.id_at_location
 
