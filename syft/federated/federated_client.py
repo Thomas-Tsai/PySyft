@@ -7,6 +7,7 @@ from syft.generic.object_storage import ObjectStorage
 from syft.federated.train_config import TrainConfig
 from syft.federated.model_config import ModelConfig
 from syft.frameworks.torch.fl.loss_fn import nll_loss
+import torch.nn as nn
 
 class FederatedClient(ObjectStorage):
     """A Client able to execute federated learning in local datasets."""
@@ -44,7 +45,7 @@ class FederatedClient(ObjectStorage):
         else:
             if isinstance(obj.id, str):
                 recv_obj_time = time.time()
-                if obj.id == "GlobalModel":
+                if obj.id[:11] == "GlobalModel":
                     print("[trace] GlobalModelSend recv COORD", recv_obj_time)
                 elif obj.id == "LossFunc":
                     print("[trace] LossFuncSend recv COORD", recv_obj_time)
@@ -156,7 +157,11 @@ class FederatedClient(ObjectStorage):
         model = self.get_obj(self.model_config._model_id)
 
         # loss_fn = self.get_obj(self.model_config._loss_fn_id)
-        loss_fn = nll_loss
+        model_type = model.id.split("_")[1]
+        if model_type == "MNIST":
+            loss_fn = nll_loss
+        elif model_type == "RESNET":
+            loss_fn = nn.CrossEntropyLoss()
 
         self._build_optimizer(
             self.model_config.optimizer, model, optimizer_args=self.model_config.optimizer_args
