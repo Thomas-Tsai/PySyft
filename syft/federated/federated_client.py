@@ -162,12 +162,15 @@ class FederatedClient(ObjectStorage):
             loss_fn = nll_loss
         elif model_type == "RESNET":
             loss_fn = nn.CrossEntropyLoss()
+        else:
+            loss_fn = nll_loss
 
         self._build_optimizer(
             self.model_config.optimizer, model, optimizer_args=self.model_config.optimizer_args
         )
 
         training_start_time = time.time()
+        pdb.set_trace()
         loss, num_of_training_data = self._plan_fit(model=model, dataset_key=dataset_key, loss_fn=loss_fn, device=device)
 
         training_end_time = time.time()
