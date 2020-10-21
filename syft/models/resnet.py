@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.hub import load_state_dict_from_url
 import syft as sy
-
+import pdb
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
            'resnet152', 'resnext50_32x4d', 'resnext101_32x8d',
@@ -67,7 +67,7 @@ class BasicBlock(nn.Module):
         if self.downsample is not None:
             identity = self.downsample(x)
 
-        out += identity
+        out.child += identity.child
         out = self.relu(out)
 
         return out
@@ -206,8 +206,8 @@ class ResNet(sy.Plan):
         x = self.bn1(x)
         x = self.relu(x)
         x = self.maxpool(x)
-
         x = self.layer1(x)
+
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
