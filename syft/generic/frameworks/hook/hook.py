@@ -578,15 +578,15 @@ class FrameworkHook(ABC):
 
             # args preprocess
             # if cmd_name == "torch.nn.functional.batch_norm":
-            from syft.execution.placeholder import PlaceHolder
-            from syft.execution.role import Role
-            args_list = list()
-            for arg in args:
-                if not isinstance(arg, PlaceHolder):
-                    if hasattr(arg, "shape"):
-                        arg = PlaceHolder(owner=syft.local_worker, role=Role(), tracing=True).instantiate(arg)
-                args_list.append(arg)
-            args = tuple(args_list)
+            # from syft.execution.placeholder import PlaceHolder
+            # from syft.execution.role import Role
+            # args_list = list()
+            # for arg in args:
+            #     if not isinstance(arg, PlaceHolder):
+            #         if hasattr(arg, "shape"):
+            #             arg = PlaceHolder(owner=syft.local_worker, role=Role(), tracing=True).instantiate(arg)
+            #     args_list.append(arg)
+            # args = tuple(args_list)
 
             try:
                 tensor_type = (
