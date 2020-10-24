@@ -170,7 +170,6 @@ class FederatedClient(ObjectStorage):
         )
 
         training_start_time = time.time()
-        pdb.set_trace()
         loss, num_of_training_data = self._plan_fit(model=model, dataset_key=dataset_key, loss_fn=loss_fn, device=device)
 
         training_end_time = time.time()
