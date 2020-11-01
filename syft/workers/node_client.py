@@ -487,7 +487,7 @@ class NodeClient(WebsocketClientWorker, FederatedClient):
         async with websockets.connect(self.url, **args_) as websocket:
             send_global_inf_start = time.time()
             await model_config.async_send(websocket, self.id, model_config.model.id)
-            print("[PROF]", "GlobalInformationSend", "duration", self.id, time.time() - send_global_inf_start)
+            print("[trace]", "GlobalInformationSend", "duration", self.id, time.time() - send_global_inf_start)
 
             message = self.create_worker_command_message(
                 command_name="fit_sagg_mc", return_ids=return_ids, dataset_key=dataset_key, encrypters=encrypters, device=device
