@@ -41,7 +41,7 @@ from syft.exceptions import ObjectNotFoundError
 from syft.exceptions import PlanCommandUnknownError
 from syft.exceptions import ResponseSignatureError
 from syft.exceptions import WorkerNotFoundException
-import pdb
+import pdb, time
 
 # this if statement avoids circular imports between base.py and pointer.py
 if TYPE_CHECKING:
@@ -592,7 +592,10 @@ class BaseWorker(AbstractWorker, ObjectStorage):
                 return
             else:
                 try:
+                    comp_start = time.time()
                     response = getattr(_self, op_name)(*args_, **kwargs_)
+                    if op_name == "__add__":
+                        print("[PROF]", "Addition", "duration", time.time() - comp_start)
                 except TypeError:
                     # TODO Andrew thinks this is gross, please fix. Instead need to properly deserialize strings
                     new_args = [
