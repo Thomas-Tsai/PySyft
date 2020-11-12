@@ -1,3 +1,46 @@
+## Environment Setup
+### GridNode
+```
+$ sudo apt-get install build-essential
+$ git clone https://github.com/bobsonlin26/GridNode.git
+$ cd GridNode/
+$ git checkout paslab-dev-0602
+$ pip install -r requirements.txt
+```
+### PySyft
+```
+$ git clone https://github.com/bobsonlin26/PySyft.git
+$ cd PySyft/
+$ git checkout paslab-asyncfl-improve-profiling
+$ pip install -e .
+```
+
+### syft-proto
+```
+$ git clone https://github.com/bobsonlin26/syft-proto.git
+$ cd syft-proto/
+$ git checkout paslab-dev-0602
+$ pip install -e .
+```
+## fl_benchmarks
+```
+$ git clone https://github.com/bobsonlin26/fl_benchmarks.git
+```
+
+
+## Example
+#### MNIST
+```
+$ bash GridNode/entrypoint_mnist_parallel.sh flvm-2 --bind 0.0.0.0:6666 --timeout 3600
+$ bash GridNode/entrypoint_mnist_parallel.sh flvm-3 --bind 0.0.0.0:6666 --timeout 3600
+$ bash GridNode/entrypoint_mnist_parallel.sh flvm-4 --bind 0.0.0.0:6666 --timeout 3600
+```
+```
+$ python fl_benchmarks/mnist/run_async2_nodeclient_sagg_training_mc
+_3rm_nchc_profiling.py
+```
+
+
 # Introduction
 
 ![](https://github.com/OpenMined/PySyft/workflows/Tests/badge.svg)
