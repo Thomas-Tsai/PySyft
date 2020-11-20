@@ -347,7 +347,13 @@ class Plan(AbstractObject):
             copied_layer = copy.deepcopy(value)
             for copied_param, param in zip(copied_layer.named_parameters(), value.parameters()):
                 (copied_name, _) = copied_param
-                copied_layer._parameters[copied_name] = self.role.placeholders[param.id]
+                name_list = copied_name.split(".")
+                if len(name_list) == 2:
+                    module_index = int(name_list[0])
+                    copied_name = name_list[1]
+                    copied_layer[module_index]._parameters[copied_name] = self.role.placeholders[param.id]
+                elif len(name_list) == 1:
+                    copied_layer._parameters[copied_name] = self.role.placeholders[param.id]
 
             return copied_layer
 
