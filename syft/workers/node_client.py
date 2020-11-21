@@ -21,7 +21,7 @@ import pathlib
 import pdb
 import time
 
-TIMEOUT_INTERVAL = 3600
+TIMEOUT_INTERVAL = 7200000
 
 class NodeClient(WebsocketClientWorker, FederatedClient):
     """Federated Node Client."""
